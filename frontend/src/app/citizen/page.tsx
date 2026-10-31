@@ -188,15 +188,18 @@ export default function CitizenDashboardPage() {
                 <span>My Complaints</span>
               </Link>
 
-              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
+              <Link
+                href="/citizen/notifications"
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+              >
                 <div className="flex items-center gap-3">
                   <Bell className="w-4 h-4" />
                   <span>Notifications</span>
                 </div>
                 <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                  3
+                  2
                 </span>
-              </div>
+              </Link>
 
               <Link
                 href="/citizen/profile"
@@ -206,10 +209,13 @@ export default function CitizenDashboardPage() {
                 <span>Profile</span>
               </Link>
 
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
+              <Link
+                href="/citizen/settings"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+              >
                 <Settings className="w-4 h-4" />
                 <span>Settings</span>
-              </div>
+              </Link>
             </nav>
           </div>
 

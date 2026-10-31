@@ -111,18 +111,18 @@ export const Navbar: React.FC = () => {
             >
               Home
             </Link>
-            <a
-              href="#about"
+            <Link
+              href="/#about"
               className="hover:text-[#075CE5] transition-colors"
             >
               About
-            </a>
-            <a
-              href="#how-it-works"
+            </Link>
+            <Link
+              href="/#how-it-works"
               className="hover:text-[#075CE5] transition-colors"
             >
               How It Works
-            </a>
+            </Link>
             <Link
               href="/explore"
               className={`hover:text-[#075CE5] transition-colors ${pathname === "/explore" ? "text-[#075CE5] font-bold" : ""
@@ -145,12 +145,12 @@ export const Navbar: React.FC = () => {
                 Dashboard
               </Link>
             )}
-            <a
-              href="#contact"
+            <Link
+              href="/#contact"
               className="hover:text-[#075CE5] transition-colors"
             >
               Contact
-            </a>
+            </Link>
           </nav>
 
           {/* Right Action & Account Area */}
@@ -214,6 +214,20 @@ export const Navbar: React.FC = () => {
             Home
           </Link>
           <Link
+            href="/#about"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-sm font-semibold text-slate-800"
+          >
+            About
+          </Link>
+          <Link
+            href="/#how-it-works"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-sm font-semibold text-slate-800"
+          >
+            How It Works
+          </Link>
+          <Link
             href="/explore"
             onClick={() => setMobileMenuOpen(false)}
             className="block text-sm font-semibold text-slate-800"
@@ -225,7 +239,7 @@ export const Navbar: React.FC = () => {
             onClick={() => setMobileMenuOpen(false)}
             className="block text-sm font-semibold text-slate-800"
           >
-            Login
+            Login / Dashboard
           </Link>
           <Link
             href="/register"
@@ -233,6 +247,13 @@ export const Navbar: React.FC = () => {
             className="block text-sm font-semibold text-slate-800"
           >
             Sign Up
+          </Link>
+          <Link
+            href="/#contact"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-sm font-semibold text-slate-800"
+          >
+            Contact
           </Link>
         </div>
       )}

@@ -211,10 +211,10 @@ export default function SubmitComplaintPage() {
   // Preset sample tiles matching Reference Image 2
   const handleSampleClick = async (type: string) => {
     let sampleUrl = "/images/pothole-before.jpg";
-    if (type === "garbage") sampleUrl = "https://images.unsplash.com/photo-1605600659908-0ef719419d41?w=800&auto=format&fit=crop&q=80";
-    if (type === "water") sampleUrl = "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=800&auto=format&fit=crop&q=80";
-    if (type === "streetlight") sampleUrl = "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?w=800&auto=format&fit=crop&q=80";
-    if (type === "drainage") sampleUrl = "https://images.unsplash.com/photo-1584467735871-8e85353a8413?w=800&auto=format&fit=crop&q=80";
+    if (type === "garbage") sampleUrl = "/images/sample-garbage.jpg";
+    if (type === "water") sampleUrl = "/images/sample-water.jpg";
+    if (type === "streetlight") sampleUrl = "/images/sample-light.jpg";
+    if (type === "drainage") sampleUrl = "/images/sample-drainage.jpg";
 
     setPhotoUrl(sampleUrl);
     setStep("analyzing");

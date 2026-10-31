@@ -1,4 +1,6 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "/api/v1";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (typeof window !== "undefined" ? "/api/v1" : "http://127.0.0.1:8000/api/v1");
 
 export class ApiError extends Error {
   status: number;
@@ -40,10 +42,15 @@ async function request<T>(
   if (!response.ok) {
     let errorDetail = "An unexpected error occurred";
     try {
-      const errJson = await response.json();
-      errorDetail = errJson.detail || errJson.message || JSON.stringify(errJson);
+      const rawText = await response.text();
+      try {
+        const errJson = JSON.parse(rawText);
+        errorDetail = errJson.detail || errJson.message || JSON.stringify(errJson);
+      } catch {
+        errorDetail = rawText || response.statusText;
+      }
     } catch {
-      errorDetail = await response.text();
+      errorDetail = response.statusText;
     }
     throw new ApiError(errorDetail, response.status);
   }

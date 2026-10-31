@@ -169,25 +169,37 @@ export default function OfficerDashboardPage() {
                 <span>Assigned Complaints</span>
               </Link>
 
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
+              <Link
+                href="/officer"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              >
                 <Clock className="w-4 h-4" />
-                <span>Work Updates</span>
-              </div>
+                <span>Work Orders</span>
+              </Link>
 
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
+              <Link
+                href="/officer"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              >
                 <Camera className="w-4 h-4" />
                 <span>Evidence Upload</span>
-              </div>
+              </Link>
 
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
+              <Link
+                href="/admin"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              >
                 <TrendingUp className="w-4 h-4" />
                 <span>Analytics</span>
-              </div>
+              </Link>
 
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
+              <Link
+                href="/explore"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              >
                 <MessageSquare className="w-4 h-4" />
-                <span>Messages</span>
-              </div>
+                <span>Public Map</span>
+              </Link>
 
               <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
                 <User className="w-4 h-4" />

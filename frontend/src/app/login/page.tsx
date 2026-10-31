@@ -551,16 +551,15 @@ export default function LoginPage() {
                   />
                   <span>Remember me</span>
                 </label>
-                <a
-                  href="#forgot"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert("Please contact your municipal administrator to reset password.");
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError("For password reset assistance, please contact Musiri Municipal Helpdesk at 1800-425-0101.");
                   }}
-                  className="font-medium text-[#075CE5] hover:underline"
+                  className="font-medium text-[#075CE5] hover:underline cursor-pointer"
                 >
                   Forgot Password?
-                </a>
+                </button>
               </div>
 
               {/* Blue Login Button matching Reference 1 */}

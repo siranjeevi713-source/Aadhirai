@@ -84,3 +84,4 @@ Once deployed:
 1. Open your production URL (`https://your-project.vercel.app`).
 2. Visit `/login` → select **Citizen** → enter your 10-digit mobile number.
 3. Test reporting a civic problem at `/citizen/submit`. The user data, AI classification, and complaints will be stored permanently in your cloud PostgreSQL database.
+
