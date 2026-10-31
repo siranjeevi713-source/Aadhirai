@@ -125,7 +125,7 @@ export default function HomePage() {
       {/* ============================================================== */}
       {/* 1. HERO BANNER MATCHING REFERENCE IMAGE 2 (TOP LEFT)           */}
       {/* ============================================================== */}
-      <section className="relative overflow-hidden bg-[#082D50] text-white">
+      <section id="about" className="relative overflow-hidden bg-[#082D50] text-white">
         {/* Background Image: Tamil Nadu Temple Town & River */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-overlay"
@@ -171,12 +171,12 @@ export default function HomePage() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
 
-                <a
-                  href="#how-it-works"
+                <Link
+                  href="/#how-it-works"
                   className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-bold backdrop-blur-md transition-all"
                 >
                   <span>Learn More</span>
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -276,7 +276,7 @@ export default function HomePage() {
       {/* ============================================================== */}
       {/* 2. PUBLIC TRACKER & CIVIC CATEGORIES                           */}
       {/* ============================================================== */}
-      <section className="py-12 bg-white border-b border-slate-200">
+      <section id="how-it-works" className="py-12 bg-white border-b border-slate-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             {/* Left: Quick Complaint Tracker */}
@@ -346,36 +346,55 @@ export default function HomePage() {
                 Common Civic Problems Detected by AADHIRAI
               </h3>
               <div className="grid grid-cols-5 gap-2 text-center">
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center mb-1 text-sm font-bold">
+                <Link
+                  href="/citizen/submit"
+                  className="p-3 bg-slate-50 hover:bg-blue-50/50 hover:border-[#075CE5] transition-all rounded-2xl border border-slate-200 flex flex-col items-center cursor-pointer group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 group-hover:scale-105 transition-transform text-orange-600 flex items-center justify-center mb-1 text-sm font-bold">
                     🕳️
                   </div>
                   <span className="text-[11px] font-bold text-slate-800">Pothole</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-1 text-sm font-bold">
+                </Link>
+
+                <Link
+                  href="/citizen/submit"
+                  className="p-3 bg-slate-50 hover:bg-blue-50/50 hover:border-[#075CE5] transition-all rounded-2xl border border-slate-200 flex flex-col items-center cursor-pointer group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 group-hover:scale-105 transition-transform text-amber-600 flex items-center justify-center mb-1 text-sm font-bold">
                     🗑️
                   </div>
                   <span className="text-[11px] font-bold text-slate-800">Garbage</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-1 text-sm font-bold">
+                </Link>
+
+                <Link
+                  href="/citizen/submit"
+                  className="p-3 bg-slate-50 hover:bg-blue-50/50 hover:border-[#075CE5] transition-all rounded-2xl border border-slate-200 flex flex-col items-center cursor-pointer group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 group-hover:scale-105 transition-transform text-blue-600 flex items-center justify-center mb-1 text-sm font-bold">
                     💧
                   </div>
                   <span className="text-[11px] font-bold text-slate-800">Water Leak</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center mb-1 text-sm font-bold">
+                </Link>
+
+                <Link
+                  href="/citizen/submit"
+                  className="p-3 bg-slate-50 hover:bg-blue-50/50 hover:border-[#075CE5] transition-all rounded-2xl border border-slate-200 flex flex-col items-center cursor-pointer group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-yellow-100 group-hover:scale-105 transition-transform text-yellow-600 flex items-center justify-center mb-1 text-sm font-bold">
                     💡
                   </div>
                   <span className="text-[11px] font-bold text-slate-800">Streetlight</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center mb-1 text-sm font-bold">
+                </Link>
+
+                <Link
+                  href="/citizen/submit"
+                  className="p-3 bg-slate-50 hover:bg-blue-50/50 hover:border-[#075CE5] transition-all rounded-2xl border border-slate-200 flex flex-col items-center cursor-pointer group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-teal-100 group-hover:scale-105 transition-transform text-teal-600 flex items-center justify-center mb-1 text-sm font-bold">
                     🌊
                   </div>
                   <span className="text-[11px] font-bold text-slate-800">Drainage</span>
-                </div>
+                </Link>
               </div>
             </div>
           </div>
@@ -490,7 +509,7 @@ export default function HomePage() {
       {/* ============================================================== */}
       {/* 4. FOOTER                                                      */}
       {/* ============================================================== */}
-      <footer className="bg-[#082D50] text-white py-10 border-t border-slate-800 text-xs">
+      <footer id="contact" className="bg-[#082D50] text-white py-10 border-t border-slate-800 text-xs">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="space-y-1 text-center sm:text-left">
             <div className="font-bold text-white text-sm">AADHIRAI – Nammaoor AI</div>
