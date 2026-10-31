@@ -4,7 +4,7 @@ import os
 import json
 import logging
 from typing import Dict, Any, List, Optional
-from PIL import Image
+from PIL import Image, ImageOps
 import numpy as np
 import imagehash
 from app.core.config import settings
@@ -48,49 +48,133 @@ class AIService:
         return R * c
 
     @staticmethod
-    def _analyze_image_heuristics(image_bytes: bytes) -> Dict[str, Any]:
+    def _preprocess_and_validate(image_bytes: bytes) -> Dict[str, Any]:
         """
-        Extract computer vision metrics: color spectrum, luminance, gradients, edges, and texture variance.
+        Safely validate image format, dimensions, apply EXIF orientation correction.
         """
         try:
-            img = Image.open(io.BytesIO(image_bytes))
-            width, height = img.size
-            if width < 50 or height < 50:
-                return {"is_valid": False, "quality": "POOR", "reason": "Resolution below 50x50"}
+            raw_img = Image.open(io.BytesIO(image_bytes))
+            format_name = raw_img.format or "JPEG"
+            
+            # Apply EXIF transpose if rotated by camera
+            try:
+                img = ImageOps.exif_transpose(raw_img)
+            except Exception:
+                img = raw_img
 
+            width, height = img.size
+            if width < 30 or height < 30:
+                return {
+                    "is_valid": False,
+                    "quality": "POOR",
+                    "reason": f"Image dimensions ({width}x{height}) are too small for inspection."
+                }
+
+            # Convert to standard RGB
             rgb_img = img.convert("RGB")
             gray_img = img.convert("L")
 
-            arr = np.array(rgb_img)
-            gray = np.array(gray_img, dtype=np.float32)
-
-            diff_y = np.abs(gray[1:, :] - gray[:-1, :])
-            diff_x = np.abs(gray[:, 1:] - gray[:, :-1])
-            edge_energy = float(np.mean(diff_y) + np.mean(diff_x))
-            quality = "EXCELLENT" if edge_energy > 12 else "FAIR" if edge_energy > 6 else "BLURRY"
-
-            r_mean = float(np.mean(arr[:, :, 0]))
-            g_mean = float(np.mean(arr[:, :, 1]))
-            b_mean = float(np.mean(arr[:, :, 2]))
-
-            dark_ratio = float(np.mean(gray < 55))
-            mid_gray = float(np.mean((gray >= 55) & (gray <= 145)))
-            bright_ratio = float(np.mean(gray > 200))
-
             return {
                 "is_valid": True,
-                "quality": quality,
-                "edge_energy": edge_energy,
-                "dark_ratio": dark_ratio,
-                "mid_gray": mid_gray,
-                "bright_ratio": bright_ratio,
-                "r_mean": r_mean,
-                "g_mean": g_mean,
-                "b_mean": b_mean,
+                "img": rgb_img,
+                "gray_img": gray_img,
+                "width": width,
+                "height": height,
+                "format": format_name,
             }
         except Exception as e:
-            logger.warning(f"Feature extraction error: {e}")
-            return {"is_valid": False, "quality": "UNKNOWN", "reason": str(e)}
+            return {
+                "is_valid": False,
+                "quality": "CORRUPTED",
+                "reason": f"Image file corrupted or invalid image format: {str(e)}"
+            }
+
+    @staticmethod
+    def _extract_civic_features(rgb_img: Image.Image, gray_img: Image.Image) -> Dict[str, Any]:
+        """
+        Extract computer vision metrics:
+        - Grayscale gradient & edge energy (Sobel-like difference)
+        - Gray/Asphalt dominance
+        - Color saturation (HSV)
+        - Color divergence (RGB std)
+        - Sky, vegetation, skin-tone ratios
+        - Dark ratio, high contrast & localized depression variance
+        """
+        arr_rgb = np.array(rgb_img, dtype=np.float32)
+        gray = np.array(gray_img, dtype=np.float32)
+
+        # Gradients
+        diff_y = np.abs(gray[1:, :] - gray[:-1, :])
+        diff_x = np.abs(gray[:, 1:] - gray[:, :-1])
+        edge_energy = float(np.mean(diff_y) + np.mean(diff_x))
+        quality = "EXCELLENT" if edge_energy > 12 else "FAIR" if edge_energy > 6 else "BLURRY"
+
+        # Color channels
+        r = arr_rgb[:, :, 0]
+        g = arr_rgb[:, :, 1]
+        b = arr_rgb[:, :, 2]
+
+        r_mean = float(np.mean(r))
+        g_mean = float(np.mean(g))
+        b_mean = float(np.mean(b))
+
+        # HSV saturation
+        hsv_img = rgb_img.convert("HSV")
+        arr_hsv = np.array(hsv_img, dtype=np.float32)
+        sat_mean = float(np.mean(arr_hsv[:, :, 1] / 255.0))
+        val_mean = float(np.mean(arr_hsv[:, :, 2] / 255.0))
+
+        # Color variance across RGB channels (high on colorful scenes/food/clothing/nature)
+        rgb_std = float(np.mean(np.std(arr_rgb, axis=2)))
+
+        # Natural environment masks
+        sky_mask = (b > r + 15) & (b > g) & (b > 110)
+        sky_ratio = float(np.mean(sky_mask))
+
+        veg_mask = (g > r + 15) & (g > b) & (g > 50)
+        veg_ratio = float(np.mean(veg_mask))
+
+        skin_mask = (r > g) & (g > b) & (r > 90) & (r - b > 30)
+        skin_ratio = float(np.mean(skin_mask))
+
+        # Asphalt / Road gray mask
+        gray_mask = (np.abs(r - g) < 20) & (np.abs(g - b) < 20) & (r > 30) & (r < 190)
+        gray_ratio = float(np.mean(gray_mask))
+
+        # Luminance distribution
+        dark_ratio = float(np.mean(gray < 55))
+        mid_gray = float(np.mean((gray >= 55) & (gray <= 145)))
+        bright_ratio = float(np.mean(gray > 200))
+
+        # Local block variance (detects craters/depression in road surface)
+        h, w = gray.shape
+        bh, bw = max(4, h // 4), max(4, w // 4)
+        block_means = []
+        for row in range(4):
+            for col in range(4):
+                blk = gray[row*bh:(row+1)*bh, col*bw:(col+1)*bw]
+                if blk.size > 0:
+                    block_means.append(float(np.mean(blk)))
+        block_variance = float(np.std(block_means)) if block_means else 0.0
+
+        return {
+            "edge_energy": edge_energy,
+            "quality": quality,
+            "sat_mean": sat_mean,
+            "val_mean": val_mean,
+            "rgb_std": rgb_std,
+            "sky_ratio": sky_ratio,
+            "veg_ratio": veg_ratio,
+            "skin_ratio": skin_ratio,
+            "gray_ratio": gray_ratio,
+            "dark_ratio": dark_ratio,
+            "mid_gray": mid_gray,
+            "bright_ratio": bright_ratio,
+            "r_mean": r_mean,
+            "g_mean": g_mean,
+            "b_mean": b_mean,
+            "block_variance": block_variance,
+        }
 
     @classmethod
     def analyze_civic_image(
@@ -101,8 +185,9 @@ class AIService:
     ) -> Dict[str, Any]:
         """
         Analyze civic evidence photograph.
-        Uses Gemini Multimodal API if GEMINI_API_KEY is configured.
-        Otherwise uses Computer Vision Decision Engine.
+        1. Validates and preprocesses image bytes with EXIF correction.
+        2. Queries Gemini Multimodal API if GEMINI_API_KEY is configured.
+        3. Falls back to deterministic Computer Vision heuristics with non-civic / unrelated filtering.
         """
         if len(image_bytes) < 100:
             return {
@@ -113,6 +198,20 @@ class AIService:
                 "suggested_severity": "LOW",
                 "image_quality": "CORRUPTED",
                 "uncertainty_reason": "No valid pixel payload found",
+                "requires_human_confirmation": True,
+                "provider_used": "validation",
+            }
+
+        prep = cls._preprocess_and_validate(image_bytes)
+        if not prep["is_valid"]:
+            return {
+                "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
+                "confidence_score": 0.20,
+                "issue_description": prep.get("reason", "Unable to decode image."),
+                "visual_indicators": ["Decoding failure"],
+                "suggested_severity": "LOW",
+                "image_quality": prep.get("quality", "POOR"),
+                "uncertainty_reason": prep.get("reason"),
                 "requires_human_confirmation": True,
                 "provider_used": "validation",
             }
@@ -139,7 +238,7 @@ Classify it strictly into ONE of the following canonical categories:
 - DAMAGED_PUBLIC_INFRASTRUCTURE (broken railing, bus shelter, divider defect)
 - DAMAGED_FOOTPATH (broken pedestrian pavement)
 - OTHER_CIVIC_ISSUE (other civic issue)
-- UNCLEAR_OR_UNDETECTABLE (no visible civic issue, selfie, blurry)
+- UNCLEAR_OR_UNDETECTABLE (no visible civic issue, selfie, animal, food, indoor room, landscape, normal clean street, blurry)
 
 Return strictly valid JSON matching this schema:
 {
@@ -175,33 +274,28 @@ Do not include markdown fences, return pure JSON."""
             except Exception as e:
                 logger.warning(f"Gemini API inference error: {e}. Falling back to Computer Vision engine.")
 
-        # 2. Local Computer Vision Feature Engine
-        f = cls._analyze_image_heuristics(image_bytes)
-        if not f.get("is_valid", False):
-            return {
-                "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
-                "confidence_score": 0.35,
-                "issue_description": "The uploaded photograph does not present clear civic infrastructure details.",
-                "visual_indicators": ["Low contrast / resolution"],
-                "suggested_severity": "LOW",
-                "image_quality": f.get("quality", "POOR"),
-                "uncertainty_reason": f.get("reason", "Unable to detect structured civic elements"),
-                "requires_human_confirmation": True,
-                "provider_used": "computer_vision_cv_engine",
-            }
+        # 2. Local Computer Vision Decision Engine
+        f = cls._extract_civic_features(prep["img"], prep["gray_img"])
 
+        edge = f["edge_energy"]
+        sat = f["sat_mean"]
+        rgb_std = f["rgb_std"]
+        sky = f["sky_ratio"]
+        skin = f["skin_ratio"]
+        gray_ratio = f["gray_ratio"]
         dark_ratio = f["dark_ratio"]
         mid_gray = f["mid_gray"]
         bright_ratio = f["bright_ratio"]
-        edge = f["edge_energy"]
         r_m = f["r_mean"]
         g_m = f["g_mean"]
         b_m = f["b_mean"]
+        block_var = f["block_variance"]
         quality = f["quality"]
 
-        # Classification heuristics based on empirical spectral and geometric properties:
-        # 0. Check for blank, solid color, or featureless images
-        if edge < 2.0 or (mid_gray < 0.05 and dark_ratio < 0.05 and bright_ratio > 0.85):
+        # -------------------------------------------------------------
+        # STAGE 1: Check for Featureless / Low-Entropy / Blurry Images
+        # -------------------------------------------------------------
+        if edge < 2.5 or (mid_gray < 0.05 and dark_ratio < 0.05 and bright_ratio > 0.85):
             return {
                 "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
                 "confidence_score": 0.25,
@@ -209,51 +303,170 @@ Do not include markdown fences, return pure JSON."""
                 "visual_indicators": ["Featureless / low entropy image", "Insufficient visual detail"],
                 "suggested_severity": "LOW",
                 "image_quality": "BLURRY",
-                "uncertainty_reason": "No visible civic issue detected",
+                "uncertainty_reason": "No visible civic infrastructure detected",
                 "requires_human_confirmation": True,
                 "provider_used": "computer_vision_cv_engine",
             }
-        # 1. Very dark, low edge energy -> Submerged dark puddle / water leakage
+
+        # -------------------------------------------------------------
+        # STAGE 2: Filter Non-Civic / Unrelated Images (Food, People, Animals, Nature)
+        # -------------------------------------------------------------
+        # Natural scenes / landscapes with high open sky or mountains
+        if sky > 0.25 and (gray_ratio < 0.45 or veg_ratio > 0.10):
+            return {
+                "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
+                "confidence_score": 0.20,
+                "issue_description": "The uploaded photograph shows a scenic landscape or horizon with no actionable municipal defect.",
+                "visual_indicators": ["Open sky / landscape horizon detected", "No localized municipal defect"],
+                "suggested_severity": "LOW",
+                "image_quality": quality,
+                "uncertainty_reason": "No municipal defect identified in image",
+                "requires_human_confirmation": True,
+                "provider_used": "computer_vision_cv_engine",
+            }
+
+        # Clean normal road with prominent sky and no severe localized pothole crater
+        if sky > 0.15 and gray_ratio > 0.50 and bright_ratio < 0.03:
+            return {
+                "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
+                "confidence_score": 0.25,
+                "issue_description": "The photograph displays an intact road surface without significant potholes, debris, or flooding.",
+                "visual_indicators": ["Normal asphalt carriageway", "No visible structural pothole crater"],
+                "suggested_severity": "LOW",
+                "image_quality": quality,
+                "uncertainty_reason": "Road surface appears clean and undamaged",
+                "requires_human_confirmation": True,
+                "provider_used": "computer_vision_cv_engine",
+            }
+
+        # Exemption: High edge energy with diverse colored debris indicates municipal solid waste / plastic litter!
+        is_waste_pattern = edge > 16.0 and (bright_ratio > 0.05 or block_var > 15.0) and sky < 0.25
+
+        # Exemption: Warm lamp enclosure / luminaire glow with high red dominance
+        is_lamp_pattern = (r_m > g_m + 35 and r_m > b_m + 35) or (edge < 6.0 and dark_ratio > 0.12 and block_var > 25.0)
+
+        if not is_waste_pattern and not is_lamp_pattern:
+            # A. Person portrait / high skin tones or dominant sky
+            if (skin > 0.12 and gray_ratio < 0.25) or (sky > 0.40 and edge < 8.0):
+                return {
+                    "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
+                    "confidence_score": 0.20,
+                    "issue_description": "The uploaded photograph appears to be a portrait or person photograph with no visible civic problem.",
+                    "visual_indicators": ["Non-civic subject (person / portrait detected)", "Low asphalt / infrastructure content"],
+                    "suggested_severity": "LOW",
+                    "image_quality": quality,
+                    "uncertainty_reason": "No municipal defect identified in image",
+                    "requires_human_confirmation": True,
+                    "provider_used": "computer_vision_cv_engine",
+                }
+
+            # B. Food, dishes, high-saturation non-infrastructure items
+            if sat > 0.22 and rgb_std > 16.0 and gray_ratio < 0.15:
+                return {
+                    "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
+                    "confidence_score": 0.20,
+                    "issue_description": "The uploaded photograph contains non-civic subject matter (food, interior item, or domestic scene).",
+                    "visual_indicators": ["High color saturation inconsistent with public infrastructure", "Absence of road or street elements"],
+                    "suggested_severity": "LOW",
+                    "image_quality": quality,
+                    "uncertainty_reason": "No municipal defect identified in image",
+                    "requires_human_confirmation": True,
+                    "provider_used": "computer_vision_cv_engine",
+                }
+
+            # C. Landscapes / scenic views / animals with high sky or low infrastructure
+            if (sky > 0.25 and gray_ratio < 0.30) or (rgb_std > 20.0 and gray_ratio < 0.20):
+                return {
+                    "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
+                    "confidence_score": 0.25,
+                    "issue_description": "The uploaded photograph shows a scenic landscape or general view with no actionable municipal defect.",
+                    "visual_indicators": ["Landscape / natural horizon detected", "No localized infrastructure damage"],
+                    "suggested_severity": "LOW",
+                    "image_quality": quality,
+                    "uncertainty_reason": "No municipal defect identified in image",
+                    "requires_human_confirmation": True,
+                    "provider_used": "computer_vision_cv_engine",
+                }
+
+            # D. Clean road without damage (sky visible + high gray ratio + low localized depression)
+            if sky > 0.12 and gray_ratio > 0.50 and dark_ratio < 0.30:
+                return {
+                    "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
+                    "confidence_score": 0.30,
+                    "issue_description": "The photograph displays an intact road surface without significant potholes, debris, or flooding.",
+                    "visual_indicators": ["Normal asphalt carriageway", "No visible structural pothole crater"],
+                    "suggested_severity": "LOW",
+                    "image_quality": quality,
+                    "uncertainty_reason": "Road surface appears clean and undamaged",
+                    "requires_human_confirmation": True,
+                    "provider_used": "computer_vision_cv_engine",
+                }
+
+        # -------------------------------------------------------------
+        # STAGE 3: Classify Genuine Civic Problems
+        # -------------------------------------------------------------
+        # 1. Very dark, saturated puddle / pipeline breach
         if dark_ratio > 0.45:
             predicted = "WATER_LEAKAGE"
             confidence = 0.91
             description = "Active potable water pipeline discharge or localized surface water pooling detected."
             indicators = ["Water film reflection", "Ground water saturation", "Submerged surface"]
             severity = "HIGH"
-        # 2. High edge energy + high texture + bright debris -> Solid waste accumulation
-        elif edge > 18.0 and bright_ratio > 0.10:
+
+        # 2. Flooded street / Waterlogging (moderate dark + reflective mid tones + low bright)
+        elif dark_ratio > 0.20 and bright_ratio < 0.05 and edge > 15.0 and gray_ratio > 0.60:
+            predicted = "WATERLOGGING"
+            confidence = 0.91
+            description = "Monsoon street water accumulation and localized carriageway flooding detected."
+            indicators = ["Submerged road pavement", "Reflective water surface", "Traffic obstruction"]
+            severity = "HIGH"
+
+        # 3. Solid waste / Plastic garbage accumulation (high edge energy + scattered debris texture)
+        elif (edge > 18.0 and bright_ratio > 0.08) or (edge > 17.0 and sat > 0.15 and gray_ratio < 0.70):
             predicted = "GARBAGE_ACCUMULATION"
             confidence = 0.94
             description = "Uncollected municipal solid waste accumulation and unsegregated debris detected."
             indicators = ["High-frequency waste debris", "Plastic packaging clutter", "Pedestrian obstruction"]
             severity = "HIGH"
-        # 3. High edge energy + dark depression on asphalt -> Pothole crater
-        elif edge > 18.0 and dark_ratio > 0.10:
+
+        # 4. Pothole crater (High edge energy + dark depression on gray asphalt + low sky)
+        elif edge > 10.0 and gray_ratio > 0.60 and (dark_ratio > 0.10 or block_var > 15.0):
             predicted = "POTHOLE"
             confidence = 0.94
             description = "A visible pothole has been detected on the road surface. This creates vehicle damage and safety hazards."
             indicators = ["Damaged asphalt surface", "Depression crater", "Edge disintegration"]
             severity = "HIGH"
-        # 4. Moderate dark + low-mid edge + grey tones -> Drainage canal / culvert silt
-        elif dark_ratio > 0.25:
+
+        # 5. Drainage culvert / canal obstruction
+        elif dark_ratio > 0.25 and edge > 4.5:
             predicted = "DRAINAGE_BLOCKAGE"
             confidence = 0.90
             description = "Stormwater channel or sewer culvert obstruction with stagnant runoff detected."
             indicators = ["Culvert debris accumulation", "Sludge sedimentation", "Runoff stagnation"]
             severity = "HIGH"
-        # 5. Warm red/orange hues or streetlight luminaire structure
-        elif r_m > g_m + 30 and r_m > b_m + 30:
+
+        # 6. Streetlight / Electrical defects (warm luminaire tones or vertical post fixture)
+        elif (r_m > g_m + 25 and r_m > b_m + 25) or (edge < 6.0 and bright_ratio < 0.05 and dark_ratio > 0.10):
             predicted = "BROKEN_STREETLIGHT"
             confidence = 0.88
             description = "Non-functional street illumination fixture or lamp defect creating public darkness."
             indicators = ["Luminaire enclosure defect", "Overhead pole structure", "Illumination failure"]
             severity = "MEDIUM"
-        else:
+
+        # 7. General road wear
+        elif gray_ratio > 0.50:
             predicted = "ROAD_DAMAGE"
-            confidence = 0.89
+            confidence = 0.88
             description = "Structural surface cracks and asphalt deterioration detected on carriageway."
             indicators = ["Asphalt wear", "Uneven road layer", "Surface fissures"]
             severity = "MEDIUM"
+
+        else:
+            predicted = "UNCLEAR_OR_UNDETECTABLE"
+            confidence = 0.35
+            description = "The visual evidence does not clearly match a standard civic defect."
+            indicators = ["Inconclusive visual patterns"]
+            severity = "LOW"
 
         return {
             "predicted_category": predicted,
@@ -262,7 +475,7 @@ Do not include markdown fences, return pure JSON."""
             "visual_indicators": indicators,
             "suggested_severity": severity,
             "image_quality": quality,
-            "uncertainty_reason": None,
+            "uncertainty_reason": None if predicted != "UNCLEAR_OR_UNDETECTABLE" else "Visual features inconclusive",
             "requires_human_confirmation": True,
             "provider_used": "computer_vision_cv_engine",
         }
