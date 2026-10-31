@@ -20,6 +20,10 @@ class Settings(BaseSettings):
         "DATABASE_URL", 
         f"sqlite:///{BASE_DIR}/aadhirai_local.db"
     )
+    # Fix for Postgres URLs from Neon / Supabase / Vercel Postgres:
+    # SQLAlchemy requires 'postgresql://' instead of 'postgres://'
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     
     # Object Storage
     STORAGE_DIR: Path = BASE_DIR / "storage_uploads"

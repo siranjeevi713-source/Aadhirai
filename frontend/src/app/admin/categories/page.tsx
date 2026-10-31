@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth/context";
 import api from "@/lib/api/client";
 import { Category } from "@/lib/types";
 import { ArrowLeft, PlusCircle, CheckCircle2, AlertCircle, Layers } from "lucide-react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function AdminCategoriesPage() {
   const { t } = useTranslation();
@@ -37,8 +38,8 @@ export default function AdminCategoriesPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (!user) await quickLoginAs("admin");
       await api.post("/admin/categories", {
+
         code,
         name_en: nameEn,
         name_ta: nameTa,
@@ -57,7 +58,9 @@ export default function AdminCategoriesPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+    <ProtectedRoute allowedRoles={["admin"]} portalTitle="புகார் வகைகள் நிர்வாகம் (Categories Management)">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+
       <Link
         href="/admin"
         className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-amber-600 transition-colors"
@@ -176,6 +179,10 @@ export default function AdminCategoriesPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }
+
+
+

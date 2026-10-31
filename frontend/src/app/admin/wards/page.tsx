@@ -5,6 +5,7 @@ import Link from "next/link";
 import api from "@/lib/api/client";
 import { Ward } from "@/lib/types";
 import { ArrowLeft, MapPin, Compass } from "lucide-react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function AdminWardsPage() {
   const [wards, setWards] = useState<Ward[]>([]);
@@ -18,7 +19,9 @@ export default function AdminWardsPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+    <ProtectedRoute allowedRoles={["admin"]} portalTitle="முசிறி 24 வார்டுகள் (24 Municipal Wards)">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+
       <Link
         href="/admin"
         className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-amber-600 transition-colors"
@@ -57,6 +60,9 @@ export default function AdminWardsPage() {
           </div>
         ))}
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }
+
+

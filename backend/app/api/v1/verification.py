@@ -59,7 +59,7 @@ def get_verification_details(
 def review_verification(
     complaint_id: str,
     payload: VerificationReviewRequest,
-    current_user: User = Depends(require_role(["admin"])),
+    current_user: User = Depends(require_role(["admin", "reviewer"])),
     db: Session = Depends(get_db)
 ):
     complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()

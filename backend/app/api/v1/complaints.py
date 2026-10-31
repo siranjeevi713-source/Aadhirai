@@ -207,6 +207,115 @@ def list_complaints(
         ))
     return items
 
+@router.get("/public/explore")
+def explore_public_complaints(
+    category_id: Optional[str] = None,
+    ward_id: Optional[str] = None,
+    status: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = 60,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Complaint)
+    if status:
+        query = query.filter(Complaint.status == status)
+    if category_id:
+        query = query.filter(Complaint.category_id == category_id)
+    if ward_id:
+        query = query.filter(Complaint.ward_id == ward_id)
+    if q:
+        search = f"%{q.strip()}%"
+        query = query.filter(
+            (Complaint.public_reference.ilike(search)) |
+            (Complaint.title.ilike(search)) |
+            (Complaint.description.ilike(search))
+        )
+    
+    complaints = query.order_by(Complaint.created_at.desc()).limit(limit).all()
+    results = []
+    for c in complaints:
+        approx_lat = round(c.latitude, 3) if c.latitude else 10.941
+        approx_lon = round(c.longitude, 3) if c.longitude else 78.448
+        masked_address = c.ward.name_ta if c.ward else (c.address_text or "முசிறி நகராட்சி")
+        
+        first_ev = None
+        if c.evidence:
+            first_ev = c.evidence[0].file_url
+            
+        results.append({
+            "id": c.id,
+            "public_reference": c.public_reference,
+            "title": c.title,
+            "status": c.status,
+            "priority": c.priority,
+            "category_code": c.category.code if c.category else "other_civic",
+            "category_name_ta": c.category.name_ta if c.category else "பொதுப் பிரச்சனை",
+            "category_name_en": c.category.name_en if c.category else "Civic Issue",
+            "ward_number": c.ward.ward_number if c.ward else None,
+            "ward_name": c.ward.name_ta if c.ward else "முசிறி",
+            "department_name": c.assigned_department.name_ta if c.assigned_department else "பொது நிர்வாகம்",
+            "approximate_lat": approx_lat,
+            "approximate_lon": approx_lon,
+            "masked_address": masked_address,
+            "photo_url": first_ev,
+            "created_at": c.created_at,
+            "due_at": c.due_at,
+            "resolved_at": c.resolved_at
+        })
+    return results
+
+@router.get("/track/{reference}")
+def track_public_complaint(
+    reference: str,
+    db: Session = Depends(get_db)
+):
+    c = db.query(Complaint).filter(Complaint.public_reference == reference).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Complaint reference not found")
+    
+    logs = db.query(AuditLog).filter(
+        AuditLog.entity_id == c.id
+    ).order_by(AuditLog.created_at.asc()).all()
+    
+    timeline = [
+        {
+            "action": log.action,
+            "details": log.details,
+            "timestamp": log.created_at
+        }
+        for log in logs
+    ]
+    
+    before_ev = None
+    after_ev = None
+    for ev in c.evidence:
+        if ev.phase == "INITIAL_SUBMISSION" and not before_ev:
+            before_ev = ev.file_url
+        elif ev.phase == "RESOLUTION_PROOF" and not after_ev:
+            after_ev = ev.file_url
+
+    return {
+        "id": c.id,
+        "public_reference": c.public_reference,
+        "title": c.title,
+        "status": c.status,
+        "priority": c.priority,
+        "category_name_ta": c.category.name_ta if c.category else "பொதுப் பிரச்சனை",
+        "category_name_en": c.category.name_en if c.category else "Civic Issue",
+        "ward_name": c.ward.name_ta if c.ward else "முசிறி",
+        "department_name": c.assigned_department.name_ta if c.assigned_department else "பொது நிர்வாகம்",
+        "approximate_lat": round(c.latitude, 3) if c.latitude else 10.941,
+        "approximate_lon": round(c.longitude, 3) if c.longitude else 78.448,
+        "address": c.ward.name_ta if c.ward else "முசிறி நகராட்சி",
+        "before_photo": before_ev,
+        "after_photo": after_ev,
+        "due_at": c.due_at,
+        "created_at": c.created_at,
+        "resolved_at": c.resolved_at,
+        "timeline": timeline,
+        "has_proof": c.status == "VERIFIED_RESOLVED"
+    }
+
 @router.get("/{complaint_id}", response_model=ComplaintDetailResponse)
 def get_complaint_details(
     complaint_id: str,

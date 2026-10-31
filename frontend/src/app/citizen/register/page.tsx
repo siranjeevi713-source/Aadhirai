@@ -145,9 +145,10 @@ export default function CitizenRegisterPage() {
 
         <p className="text-center text-xs text-slate-600 dark:text-slate-400">
           ஏற்கனவே கணக்கு உள்ளதா?{" "}
-          <Link href="/citizen/login" className="font-bold text-indigo-600 hover:text-indigo-500">
-            உள்நுழைக (Login)
+          <Link href="/login" className="font-bold text-indigo-600 hover:text-indigo-500">
+            உள்நுழைக (Sign In)
           </Link>
+
         </p>
       </div>
     </div>

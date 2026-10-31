@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -5,6 +6,15 @@ from app.models.models import PublicProofRecord, Complaint
 from app.schemas.schemas import PublicProofResponse
 
 router = APIRouter(prefix="/public", tags=["Public Proof"])
+
+@router.get("/proofs", response_model=List[PublicProofResponse])
+def list_public_proofs(
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    """Retrieve verified public proofs for public accountability record."""
+    proofs = db.query(PublicProofRecord).order_by(PublicProofRecord.published_at.desc()).limit(limit).all()
+    return proofs
 
 @router.get("/proof/{public_reference}", response_model=PublicProofResponse)
 def get_public_proof(

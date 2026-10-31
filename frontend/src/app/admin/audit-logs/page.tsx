@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api/client";
 import { ArrowLeft, ShieldAlert, Clock, Database } from "lucide-react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function AdminAuditLogsPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -17,7 +18,9 @@ export default function AdminAuditLogsPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+    <ProtectedRoute allowedRoles={["admin"]} portalTitle="தணிக்கைப் பதிவுகள் (Immutable Audit Trail)">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+
       <Link
         href="/admin"
         className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-amber-600 transition-colors"
@@ -65,6 +68,9 @@ export default function AdminAuditLogsPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }
+
+

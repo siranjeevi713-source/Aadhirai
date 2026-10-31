@@ -11,8 +11,13 @@ class UserRegister(BaseModel):
     preferred_language: str = Field("ta", example="ta")
 
 class UserLogin(BaseModel):
-    phone: str
+    phone: Optional[str] = None
+    identifier: Optional[str] = None
     password: str
+    expected_role: Optional[str] = None
+    expected_department_id: Optional[str] = None
+
+
 
 class RoleSchema(BaseModel):
     id: str
@@ -236,6 +241,25 @@ class AIClassifyResponse(BaseModel):
     confidence: float
     reason: str
     requires_human_review: bool
+
+class CivicImageAnalysisResponse(BaseModel):
+    predicted_category: str
+    category_id: Optional[str] = None
+    category_name: str
+    confidence: float
+    confidence_score: float
+    severity: str
+    suggested_severity: str
+    issue_description: str
+    reason: str
+    visual_indicators: List[str] = []
+    suggested_department: str
+    suggested_department_id: Optional[str] = None
+    image_quality: str
+    uncertainty_reason: Optional[str] = None
+    requires_human_confirmation: bool
+    requires_human_review: bool
+    provider_used: str
 
 class DuplicateCheckRequest(BaseModel):
     latitude: float

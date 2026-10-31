@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/context";
 import { useAuth } from "@/lib/auth/context";
+import AadhiraiBrandLogo from "@/components/AadhiraiBrandLogo";
 import {
-  ShieldCheck,
   Globe,
   User,
   LogOut,
@@ -18,285 +18,226 @@ import {
   LayoutDashboard,
   PlusCircle,
   Search,
+  PhoneCall,
+  UserPlus,
 } from "lucide-react";
 
 export const Navbar: React.FC = () => {
-  const { t, language, toggleLanguage } = useTranslation();
-  const { user, logout, quickLoginAs } = useAuth();
+  const { language, toggleLanguage } = useTranslation();
+  const { user, logout } = useAuth();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  const isActive = (path: string) => pathname.startsWith(path);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isActive = (path: string) => {
+    if (path === "/" && pathname === "/") return true;
+    if (path !== "/" && pathname.startsWith(path)) return true;
+    return false;
+  };
+
+  const getUserWorkspace = () => {
+    if (!user || !user.roles) return null;
+    const roleNames = user.roles.map((r: any) => r.name.toLowerCase());
+    if (roleNames.includes("admin")) {
+      return { path: "/admin", label: "Dashboard", icon: LayoutDashboard };
+    }
+    if (roleNames.includes("reviewer")) {
+      return { path: "/admin/verification", label: "Verification", icon: FileCheck2 };
+    }
+    if (roleNames.includes("officer")) {
+      return { path: "/officer", label: "Dashboard", icon: HardHat };
+    }
+    return { path: "/citizen", label: "Dashboard", icon: Users };
+  };
+
+  const workspace = mounted ? getUserWorkspace() : null;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90 shadow-sm">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 h-16">
-        {/* Brand */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 via-blue-600 to-teal-500 text-white shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-            <ShieldCheck className="h-6 w-6" />
-          </div>
-          <div>
-            <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              ஆதிரை <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">AADHIRAI</span>
+    <header className="sticky top-0 z-50 w-full shadow-xs">
+      {/* 1. Official Government Utility Strip */}
+      <div className="bg-[#082D50] text-slate-200 text-[11px] font-medium border-b border-[#064A86]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 py-1.5">
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="font-semibold text-white tracking-wide">
+              தமிழ்நாடு அரசு | Government of Tamil Nadu
             </span>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-none">
-              {t.pilotBadge}
-            </p>
+            <span className="text-slate-400 hidden sm:inline">•</span>
+            <span className="text-slate-300 hidden sm:inline">
+              முசிறி நகராட்சி (Musiri Municipality)
+            </span>
           </div>
-        </Link>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
-          <Link
-            href="/citizen"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
-              isActive("/citizen")
-                ? "bg-indigo-50 text-indigo-700 font-semibold dark:bg-indigo-950 dark:text-indigo-300"
-                : "text-slate-600 hover:text-indigo-600 hover:bg-slate-50 dark:text-slate-300"
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            {t.citizenPortal}
-          </Link>
-
-          <Link
-            href="/officer"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
-              isActive("/officer")
-                ? "bg-indigo-50 text-indigo-700 font-semibold dark:bg-indigo-950 dark:text-indigo-300"
-                : "text-slate-600 hover:text-indigo-600 hover:bg-slate-50 dark:text-slate-300"
-            }`}
-          >
-            <HardHat className="h-4 w-4" />
-            {t.officerPortal}
-          </Link>
-
-          <Link
-            href="/admin"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
-              isActive("/admin")
-                ? "bg-indigo-50 text-indigo-700 font-semibold dark:bg-indigo-950 dark:text-indigo-300"
-                : "text-slate-600 hover:text-indigo-600 hover:bg-slate-50 dark:text-slate-300"
-            }`}
-          >
-            <LayoutDashboard className="h-4 w-4" />
-            {t.adminPortal}
-          </Link>
-
-          <Link
-            href="/proof/ADH-2026-MSR-0001"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
-              isActive("/proof")
-                ? "bg-teal-50 text-teal-700 font-semibold dark:bg-teal-950 dark:text-teal-300"
-                : "text-slate-600 hover:text-teal-600 hover:bg-slate-50 dark:text-slate-300"
-            }`}
-          >
-            <FileCheck2 className="h-4 w-4 text-emerald-600" />
-            {t.publicProof}
-          </Link>
-        </nav>
-
-        {/* Right Tools: Language + Role Switcher + Auth */}
-        <div className="hidden md:flex items-center gap-3">
-          {/* Language Switcher */}
-          <button
-            onClick={toggleLanguage}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            title="Toggle Tamil / English"
-          >
-            <Globe className="h-3.5 w-3.5 text-indigo-600" />
-            {language === "ta" ? "English" : "தமிழ்"}
-          </button>
-
-          {/* Quick Demo Role Switcher */}
-          <div className="relative">
-            <button
-              onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors"
+          <div className="flex items-center gap-3 sm:gap-4">
+            <a
+              href="tel:18004250101"
+              className="hidden md:flex items-center gap-1.5 text-slate-200 hover:text-amber-300 transition-colors"
+              title="Musiri Municipal Grievance Helpline"
             >
-              <span>பங்கு (Role):</span>
-              <strong className="text-indigo-600 dark:text-indigo-400 capitalize">
-                {user ? user.roles[0]?.name : "Guest"}
-              </strong>
-            </button>
+              <PhoneCall className="h-3 w-3 text-amber-400" />
+              <span>உதவி எண்: 1800-425-0101</span>
+            </a>
 
-            {roleSwitcherOpen && (
-              <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-900 z-50">
-                <p className="px-2 py-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  துரித உள்நுழைவு (Quick Test Login)
-                </p>
-                <button
-                  onClick={() => {
-                    quickLoginAs("citizen");
-                    setRoleSwitcherOpen(false);
-                  }}
-                  className="w-full text-left px-2.5 py-2 text-xs rounded-lg hover:bg-indigo-50 dark:hover:bg-slate-800 flex items-center justify-between"
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/20 cursor-pointer"
+              aria-label="Toggle language between Tamil and English"
+            >
+              <Globe className="h-3 w-3 text-teal-300" />
+              <span>{language === "ta" ? "English" : "தமிழ்"}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Main Institutional Navigation Bar matching Reference 2 */}
+      <div className="border-b border-slate-200 bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 h-16">
+          {/* Brand Logo with exact diamond icon */}
+          <Link href="/" className="flex items-center gap-2">
+            <AadhiraiBrandLogo size="md" variant="dark" />
+          </Link>
+
+          {/* Desktop Navigation Links matching Reference 2 */}
+          <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-700">
+            <Link
+              href="/"
+              className={`hover:text-[#075CE5] transition-colors ${pathname === "/" ? "text-[#075CE5] font-bold" : ""
+                }`}
+            >
+              Home
+            </Link>
+            <a
+              href="#about"
+              className="hover:text-[#075CE5] transition-colors"
+            >
+              About
+            </a>
+            <a
+              href="#how-it-works"
+              className="hover:text-[#075CE5] transition-colors"
+            >
+              How It Works
+            </a>
+            <Link
+              href="/explore"
+              className={`hover:text-[#075CE5] transition-colors ${pathname === "/explore" ? "text-[#075CE5] font-bold" : ""
+                }`}
+            >
+              Public Map
+            </Link>
+            {workspace ? (
+              <Link
+                href={workspace.path}
+                className="hover:text-[#075CE5] transition-colors text-blue-600 font-bold"
+              >
+                {workspace.label}
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="hover:text-[#075CE5] transition-colors"
+              >
+                Dashboard
+              </Link>
+            )}
+            <a
+              href="#contact"
+              className="hover:text-[#075CE5] transition-colors"
+            >
+              Contact
+            </a>
+          </nav>
+
+          {/* Right Action & Account Area */}
+          <div className="hidden sm:flex items-center gap-3">
+            {mounted && user ? (
+              <div className="flex items-center gap-3">
+                <Link
+                  href={workspace?.path || "/citizen"}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 transition-colors"
                 >
-                  <div>
-                    <p className="font-semibold text-slate-900 dark:text-white">குடிமகன் (Citizen)</p>
-                    <p className="text-[10px] text-slate-500">+91 98765 43210</p>
-                  </div>
-                  <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Switch</span>
-                </button>
+                  <User className="h-3.5 w-3.5 text-blue-600" />
+                  <span>{user.full_name?.split(" ")[0] || "My Account"}</span>
+                </Link>
                 <button
-                  onClick={() => {
-                    quickLoginAs("officer");
-                    setRoleSwitcherOpen(false);
-                  }}
-                  className="w-full text-left px-2.5 py-2 text-xs rounded-lg hover:bg-indigo-50 dark:hover:bg-slate-800 flex items-center justify-between"
+                  onClick={logout}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                  title="Logout"
                 >
-                  <div>
-                    <p className="font-semibold text-slate-900 dark:text-white">பொறியாளர் (Officer)</p>
-                    <p className="text-[10px] text-slate-500">Ward 7 Roads Eng</p>
-                  </div>
-                  <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Switch</span>
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span>Logout</span>
                 </button>
-                <button
-                  onClick={() => {
-                    quickLoginAs("admin");
-                    setRoleSwitcherOpen(false);
-                  }}
-                  className="w-full text-left px-2.5 py-2 text-xs rounded-lg hover:bg-indigo-50 dark:hover:bg-slate-800 flex items-center justify-between"
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-blue-600 hover:bg-slate-50 transition-colors"
                 >
-                  <div>
-                    <p className="font-semibold text-slate-900 dark:text-white">ஆணையர் (Commissioner)</p>
-                    <p className="text-[10px] text-slate-500">Super Admin</p>
-                  </div>
-                  <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">Switch</span>
-                </button>
+                  Login
+                </Link>
+                <Link
+                  href="/citizen/submit"
+                  className="px-4 py-2 rounded-xl bg-[#075CE5] hover:bg-[#064ec7] text-white text-xs font-bold shadow-sm transition-all"
+                >
+                  Sign Up
+                </Link>
               </div>
             )}
           </div>
 
-          {/* User Profile or Login CTA */}
-          {user ? (
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-700">
-              <Link
-                href="/citizen/profile"
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600"
-              >
-                <div className="h-7 w-7 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
-                  {user.full_name.charAt(0)}
-                </div>
-                <span className="max-w-[100px] truncate">{user.full_name}</span>
-              </Link>
-              <button
-                onClick={logout}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-slate-800 transition-colors"
-                title={t.logout}
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Link
-                href="/citizen/login"
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                {t.login}
-              </Link>
-              <Link
-                href="/citizen/register"
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
-              >
-                {t.register}
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* Mobile menu trigger */}
-        <div className="flex md:hidden items-center gap-2">
-          <button
-            onClick={toggleLanguage}
-            className="p-1.5 rounded-lg border border-slate-200 text-xs font-bold text-indigo-600"
-          >
-            {language === "ta" ? "EN" : "தமிழ்"}
-          </button>
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300"
-          >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          {/* Mobile Menu Button */}
+          <div className="flex sm:hidden">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-xl text-slate-600 hover:bg-slate-100"
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-3 dark:border-slate-800 dark:bg-slate-900 shadow-xl">
+        <div className="sm:hidden bg-white border-b border-slate-200 p-4 space-y-3">
           <Link
-            href="/citizen"
+            href="/"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 py-2 text-sm font-medium text-slate-700 dark:text-slate-200"
+            className="block text-sm font-semibold text-slate-800"
           >
-            <Users className="h-4 w-4 text-indigo-600" />
-            {t.citizenPortal}
+            Home
           </Link>
           <Link
-            href="/officer"
+            href="/explore"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 py-2 text-sm font-medium text-slate-700 dark:text-slate-200"
+            className="block text-sm font-semibold text-slate-800"
           >
-            <HardHat className="h-4 w-4 text-indigo-600" />
-            {t.officerPortal}
+            Public Map
           </Link>
           <Link
-            href="/admin"
+            href="/login"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 py-2 text-sm font-medium text-slate-700 dark:text-slate-200"
+            className="block text-sm font-semibold text-slate-800"
           >
-            <LayoutDashboard className="h-4 w-4 text-indigo-600" />
-            {t.adminPortal}
+            Login
           </Link>
           <Link
-            href="/proof/ADH-2026-MSR-0001"
+            href="/register"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 py-2 text-sm font-medium text-slate-700 dark:text-slate-200"
+            className="block text-sm font-semibold text-slate-800"
           >
-            <FileCheck2 className="h-4 w-4 text-teal-600" />
-            {t.publicProof}
+            Sign Up
           </Link>
-          <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
-            {user ? (
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                  {user.full_name}
-                </span>
-                <button
-                  onClick={() => {
-                    logout();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="text-xs font-semibold text-red-600"
-                >
-                  {t.logout}
-                </button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Link
-                  href="/citizen/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex-1 text-center py-2 text-xs font-bold rounded-lg bg-slate-100 text-slate-800"
-                >
-                  {t.login}
-                </Link>
-                <Link
-                  href="/citizen/register"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex-1 text-center py-2 text-xs font-bold rounded-lg bg-indigo-600 text-white"
-                >
-                  {t.register}
-                </Link>
-              </div>
-            )}
-          </div>
         </div>
       )}
     </header>
   );
 };
+
+export default Navbar;

@@ -28,14 +28,17 @@ export interface Category {
   code: string;
   name_en: string;
   name_ta: string;
-  default_priority: string;
-  icon_key: string;
-  is_active: boolean;
+  default_priority?: string;
+  icon_key?: string;
+  department_id?: string;
+  base_sla_hours?: number;
+  is_active?: boolean;
 }
 
 export interface Ward {
   id: string;
   ward_number: number;
+  number?: number;
   name_en: string;
   name_ta: string;
   center_lat: number;
@@ -103,6 +106,7 @@ export interface Feedback {
 export interface Complaint {
   id: string;
   public_reference: string;
+  reference_number?: string;
   title: string;
   description: string;
   language: string;
@@ -112,7 +116,7 @@ export interface Complaint {
   longitude: number;
   address_text?: string;
   landmark?: string;
-  category: Category;
+  category?: Category;
   ward?: Ward;
   ward_name?: string;
   department_name?: string;
@@ -124,7 +128,7 @@ export interface Complaint {
   due_at?: string;
   resolved_at?: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   evidence?: Evidence[];
   work_orders?: WorkOrder[];
   verification?: Verification;
@@ -165,17 +169,87 @@ export interface HotspotItem {
 }
 
 export interface PublicProof {
+  id?: string;
+  complaint_id?: string;
   public_reference: string;
-  category_name: string;
-  approximate_lat: number;
-  approximate_lon: number;
-  ward_name: string;
-  submitted_date: string;
-  resolved_date: string;
-  turnaround_hours: number;
+  reference_number?: string;
+  category_name?: string;
+  category_name_en?: string;
+  category_name_ta?: string;
+  approximate_lat?: number;
+  approximate_lon?: number;
+  ward_name?: string;
+  ward_number?: number;
+  department_name?: string;
+  department_name_en?: string;
+  department_name_ta?: string;
+  submitted_date?: string;
+  reported_at?: string;
+  resolved_date?: string;
+  resolved_at?: string;
+  turnaround_hours?: number;
+  sla_hours?: number;
   before_image_url: string;
   after_image_url: string;
-  verification_summary: string;
+  verification_summary?: string;
+  verification_notes?: string;
+  proof_hash?: string;
   qr_code_url?: string;
-  published_at: string;
+  published_at?: string;
+}
+
+export interface PublicExploreItem {
+  id: string;
+  public_reference: string;
+  reference_number?: string;
+  title: string;
+  status: string;
+  priority: string;
+  category_code?: string;
+  category_name_ta?: string;
+  category_name_en?: string;
+  category?: Category;
+  ward_number?: number;
+  ward_name?: string;
+  ward?: Ward;
+  department_name?: string;
+  approximate_lat?: number;
+  approximate_lon?: number;
+  latitude?: number;
+  longitude?: number;
+  masked_address?: string;
+  photo_url?: string;
+  created_at: string;
+  due_at?: string;
+  resolved_at?: string;
+  has_proof?: boolean;
+}
+
+export interface PublicTrackResponse {
+  id: string;
+  public_reference: string;
+  reference_number?: string;
+  title: string;
+  status: string;
+  priority: string;
+  category?: string;
+  category_name_ta?: string;
+  category_name_en?: string;
+  ward_name?: string;
+  ward?: { number?: number; name_en?: string };
+  department_name?: string;
+  approximate_lat?: number;
+  approximate_lon?: number;
+  address?: string;
+  before_photo?: string;
+  after_photo?: string;
+  due_at?: string;
+  created_at: string;
+  resolved_at?: string;
+  timeline?: {
+    action: string;
+    details: string;
+    timestamp: string;
+  }[];
+  has_proof?: boolean;
 }

@@ -91,4 +91,28 @@ aadhrai/
 ### 7. Pilot Deployment Context: Musiri Municipality
 - **District**: Tiruchirappalli, Tamil Nadu
 - **Wards**: 24 Municipal Wards
-- **Key Departments**: Roads & Highways, Public Health & Sanitation, Water Supply & Drainage, Streetlighting & Electrical, Town Planning.
+- **Key Departments**: Municipal Roads, Sanitation & Waste Management, Water Supply & Drainage, Streetlight & Electrical, Public Health.
+
+---
+
+### 8. Quick Start & Test Credentials
+
+#### Default Test Accounts:
+| Role | Email / Identifier | Password | Access Portal |
+| :--- | :--- | :--- | :--- |
+| **Citizen** | `citizen@aadhirai.gov.in` | `Citizen@123` | `/citizen` |
+| **Officer (Roads)** | `officer.roads@aadhirai.gov.in` | `Officer@123` | `/officer` |
+| **Municipal Admin** | `admin@aadhirai.gov.in` | `Admin@123` | `/admin` |
+| **Verification Reviewer**| `reviewer@aadhirai.gov.in` | `Reviewer@123` | `/admin/verification` |
+
+#### Running Tests:
+```powershell
+# Run backend tests (59 passed)
+cd backend
+python -m pytest -v
+
+# Run frontend TypeScript check (0 errors)
+cd frontend
+npx tsc --noEmit
+```
+

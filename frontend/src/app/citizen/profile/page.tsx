@@ -1,102 +1,225 @@
 "use client";
 
 import React from "react";
-import { useTranslation } from "@/lib/i18n/context";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
-import { User, Phone, Mail, Globe, Shield, LogOut } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
+import AadhiraiBrandLogo from "@/components/AadhiraiBrandLogo";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import {
+  LayoutDashboard,
+  PlusCircle,
+  FileText,
+  Bell,
+  User,
+  Settings,
+  LogOut,
+  ChevronRight,
+  Phone,
+  Mail,
+  Globe,
+  Shield,
+  Edit3,
+  CheckCircle2,
+} from "lucide-react";
+
+const CITIZEN_NAV = [
+  { label: "Dashboard", icon: LayoutDashboard, href: "/citizen" },
+  { label: "Report a Problem", icon: PlusCircle, href: "/citizen/submit" },
+  { label: "My Complaints", icon: FileText, href: "/citizen/complaints" },
+  { label: "Notifications", icon: Bell, href: "/citizen/notifications", badge: 9 },
+  { label: "Profile", icon: User, href: "/citizen/profile", active: true },
+  { label: "Settings", icon: Settings, href: "/citizen/settings" },
+];
 
 export default function CitizenProfilePage() {
-  const { t, language, setLanguage } = useTranslation();
+  const { language, setLanguage } = useTranslation();
   const { user, logout } = useAuth();
+  const pathname = usePathname();
+
+  const initials = user?.full_name
+    ? user.full_name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)
+    : "C";
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-          பயனர் சுயவிவரம் (Citizen Profile)
-        </h1>
-        <p className="text-xs text-slate-500">
-          உங்கள் கணக்கு விவரங்கள் மற்றும் மொழி அமைப்புகள்
-        </p>
-      </div>
+    <ProtectedRoute allowedRoles={["citizen"]} portalTitle="Citizen Profile">
+      <div className="flex h-screen overflow-hidden bg-[#F4F8FC]">
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-        <div className="flex items-center gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
-          <div className="h-16 w-16 rounded-2xl bg-indigo-600 text-white font-extrabold text-xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
-            {user ? user.full_name.charAt(0) : "C"}
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              {user ? user.full_name : "குடிமகன் (Citizen)"}
-            </h2>
-            <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
-              <Shield className="h-3.5 w-3.5 text-emerald-600" />
-              <span>சரிபார்க்கப்பட்ட பயனர் (Verified Citizen)</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1">
-            <span className="text-slate-400 flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5" /> தொலைபேசி எண்
-            </span>
-            <p className="font-bold text-slate-900 dark:text-white">
-              {user ? user.phone : "+91 98765 43210"}
-            </p>
+        {/* ── Navy Left Sidebar ── */}
+        <aside className="hidden md:flex flex-col w-64 shrink-0 bg-[#082D50] text-white">
+          <div className="px-5 py-5 border-b border-white/10">
+            <AadhiraiBrandLogo size="sm" variant="white" />
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1">
-            <span className="text-slate-400 flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5" /> மின்னஞ்சல்
-            </span>
-            <p className="font-bold text-slate-900 dark:text-white">
-              {user?.email || "மின்னஞ்சல் சேர்க்கப்படவில்லை"}
-            </p>
-          </div>
-        </div>
+          <nav className="flex-1 px-3 py-4 space-y-0.5">
+            {CITIZEN_NAV.map(({ label, icon: Icon, href, active, badge }) => {
+              const isActive = active || pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${isActive
+                      ? "bg-[#075CE5] text-white shadow-md"
+                      : "text-slate-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1">{label}</span>
+                  {badge && (
+                    <span className="h-4 w-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
+                      {badge}
+                    </span>
+                  )}
+                  {isActive && !badge && <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />}
+                </Link>
+              );
+            })}
+          </nav>
 
-        {/* Language Selection */}
-        <div className="space-y-2 pt-2">
-          <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-            <Globe className="h-4 w-4 text-indigo-600" />
-            <span>விருப்ப மொழி (Preferred Language)</span>
-          </label>
-          <div className="grid grid-cols-2 gap-3 max-w-sm">
+          <div className="px-4 py-4 border-t border-white/10 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-[#13C6B5] text-[#082D50] font-extrabold text-xs flex items-center justify-center shrink-0">
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white truncate">{user?.full_name || "Citizen"}</p>
+                <p className="text-[10px] text-slate-400 truncate">Verified Citizen</p>
+              </div>
+            </div>
             <button
-              onClick={() => setLanguage("ta")}
-              className={`p-3 rounded-xl border text-xs font-bold transition-colors ${
-                language === "ta"
-                  ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
+              onClick={logout}
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-xs text-slate-400 hover:bg-white/10 hover:text-white transition-all"
             >
-              தமிழ் (Tamil - இயல்புநிலை)
-            </button>
-            <button
-              onClick={() => setLanguage("en")}
-              className={`p-3 rounded-xl border text-xs font-bold transition-colors ${
-                language === "en"
-                  ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              English
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Sign Out</span>
             </button>
           </div>
-        </div>
+        </aside>
 
-        {/* Logout */}
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-50 text-red-700 font-bold text-xs hover:bg-red-100 transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>கணக்கிலிருந்து வெளியேறு (Logout)</span>
-          </button>
+        {/* ── Main Content ── */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Top bar */}
+          <header className="bg-white border-b border-[#DCE6F0] px-6 py-3.5 flex items-center justify-between shrink-0">
+            <div>
+              <h1 className="text-base font-bold text-[#082D50]">Citizen Profile</h1>
+              <p className="text-[11px] text-slate-500">Your account details and preferences</p>
+            </div>
+            <div className="h-8 w-8 rounded-full bg-[#13C6B5] text-[#082D50] font-extrabold text-xs flex items-center justify-center">
+              {initials}
+            </div>
+          </header>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="max-w-2xl space-y-5">
+
+              {/* Profile Card */}
+              <div className="bg-white rounded-2xl border border-[#DCE6F0] shadow-sm p-6">
+                <div className="flex items-center gap-5 pb-5 border-b border-[#F4F8FC]">
+                  <div className="h-16 w-16 rounded-2xl bg-[#075CE5] text-white font-extrabold text-xl flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0">
+                    {initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg font-bold text-[#082D50]">
+                      {user ? user.full_name : "Citizen User"}
+                    </h2>
+                    <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1">
+                      <Shield className="h-3.5 w-3.5 text-emerald-500" />
+                      <span>Verified Citizen Account</span>
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 ml-1" />
+                    </p>
+                  </div>
+                  <button className="p-2 rounded-xl border border-[#DCE6F0] hover:bg-[#F4F8FC] text-slate-500 hover:text-[#075CE5] transition-all">
+                    <Edit3 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
+                  <div className="p-4 rounded-xl bg-[#F4F8FC] border border-[#DCE6F0]">
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1.5 mb-1">
+                      <Phone className="h-3.5 w-3.5" /> Phone Number
+                    </span>
+                    <p className="font-bold text-[#082D50] text-sm">
+                      {user?.phone || "+91 98765 43210"}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#F4F8FC] border border-[#DCE6F0]">
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1.5 mb-1">
+                      <Mail className="h-3.5 w-3.5" /> Email Address
+                    </span>
+                    <p className="font-bold text-[#082D50] text-sm">
+                      {user?.email || "Not provided"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Language Preferences */}
+              <div className="bg-white rounded-2xl border border-[#DCE6F0] shadow-sm p-6">
+                <h3 className="text-xs font-bold text-[#082D50] uppercase tracking-wider flex items-center gap-2 mb-4">
+                  <Globe className="h-4 w-4 text-[#075CE5]" />
+                  Language Preference
+                </h3>
+                <div className="grid grid-cols-2 gap-3 max-w-xs">
+                  <button
+                    onClick={() => setLanguage("ta")}
+                    className={`p-3.5 rounded-xl border text-xs font-bold transition-all ${language === "ta"
+                        ? "border-[#075CE5] bg-blue-50 text-[#075CE5]"
+                        : "border-[#DCE6F0] bg-[#F4F8FC] text-slate-600 hover:border-[#075CE5]"
+                      }`}
+                  >
+                    🇮🇳 தமிழ்
+                    <span className="block text-[10px] font-normal mt-0.5 text-slate-500">Tamil (Default)</span>
+                  </button>
+                  <button
+                    onClick={() => setLanguage("en")}
+                    className={`p-3.5 rounded-xl border text-xs font-bold transition-all ${language === "en"
+                        ? "border-[#075CE5] bg-blue-50 text-[#075CE5]"
+                        : "border-[#DCE6F0] bg-[#F4F8FC] text-slate-600 hover:border-[#075CE5]"
+                      }`}
+                  >
+                    🇬🇧 English
+                    <span className="block text-[10px] font-normal mt-0.5 text-slate-500">English</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Civic Stats */}
+              <div className="bg-white rounded-2xl border border-[#DCE6F0] shadow-sm p-6">
+                <h3 className="text-xs font-bold text-[#082D50] uppercase tracking-wider mb-4">
+                  Your Civic Contribution
+                </h3>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  {[
+                    { label: "Complaints Filed", value: "5", color: "text-[#075CE5]" },
+                    { label: "Resolved", value: "2", color: "text-emerald-600" },
+                    { label: "In Progress", value: "2", color: "text-amber-600" },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="p-4 rounded-xl bg-[#F4F8FC] border border-[#DCE6F0]">
+                      <p className={`text-2xl font-black ${color}`}>{value}</p>
+                      <p className="text-[11px] text-slate-500 mt-1">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Danger Zone */}
+              <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-5">
+                <h3 className="text-xs font-bold text-red-700 uppercase tracking-wider mb-3">Account Actions</h3>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-50 text-red-700 font-bold text-xs hover:bg-red-100 border border-red-200 transition-all"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out of AADHIRAI
+                </button>
+              </div>
+
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

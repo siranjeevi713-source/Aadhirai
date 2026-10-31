@@ -5,6 +5,7 @@ import Link from "next/link";
 import api from "@/lib/api/client";
 import { Department } from "@/lib/types";
 import { ArrowLeft, Building2, Phone, Mail } from "lucide-react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function AdminDepartmentsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -18,7 +19,9 @@ export default function AdminDepartmentsPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+    <ProtectedRoute allowedRoles={["admin"]} portalTitle="நகராட்சி துறைகள் (Departments Roster)">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+
       <Link
         href="/admin"
         className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-amber-600 transition-colors"
@@ -68,6 +71,8 @@ export default function AdminDepartmentsPage() {
           </div>
         ))}
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }
+

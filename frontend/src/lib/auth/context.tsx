@@ -11,7 +11,7 @@ interface AuthContextType {
   login: (token: string, user: User) => void;
   logout: () => Promise<void>;
   hasRole: (role: string) => boolean;
-  quickLoginAs: (role: "citizen" | "officer" | "admin") => Promise<void>;
+  quickLoginAs: (role: "citizen" | "officer" | "reviewer" | "admin") => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,10 +80,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return roleNames.includes("admin") || roleNames.includes(roleName);
   };
 
-  const quickLoginAs = async (role: "citizen" | "officer" | "admin") => {
+  const quickLoginAs = async (role: "citizen" | "officer" | "reviewer" | "admin") => {
     const credentials = {
       citizen: { phone: "+919876543210", password: "Password123!" },
       officer: { phone: "+919876543211", password: "Password123!" },
+      reviewer: { phone: "+919876543213", password: "Password123!" },
       admin: { phone: "+919876543212", password: "Password123!" },
     }[role];
 

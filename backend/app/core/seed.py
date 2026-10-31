@@ -3,7 +3,8 @@ from app.core.database import SessionLocal, Base, engine
 from app.core.security import get_password_hash
 from app.models.models import (
     Role, User, Department, Municipality, Ward, Officer,
-    ComplaintCategory, RoutingRule, SLAPolicy
+    ComplaintCategory, RoutingRule, SLAPolicy,
+    Complaint, ComplaintEvidence, VerificationRequest, PublicProofRecord
 )
 
 def seed_database(db: Session = None):
@@ -18,6 +19,7 @@ def seed_database(db: Session = None):
         roles_data = [
             ("citizen", "Regular citizen of Musiri"),
             ("officer", "Government field officer or engineer"),
+            ("reviewer", "Independent Third-Party Civic Reviewer & Ombudsman"),
             ("admin", "Municipal Commissioner or Department Admin")
         ]
         role_map = {}
@@ -225,6 +227,113 @@ def seed_database(db: Session = None):
             )
             db.add(admin_user)
             db.flush()
+
+        # D: Reviewer / Ombudsman
+        reviewer_user = db.query(User).filter(User.phone == "+919876543213").first()
+        if not reviewer_user:
+            reviewer_user = User(
+                phone="+919876543213",
+                email="reviewer.latha@musiri.gov.in",
+                full_name="திருமதி லதா (Latha - Third-Party Reviewer)",
+                password_hash=get_password_hash("Password123!"),
+                preferred_language="ta",
+                roles=[role_map["reviewer"]]
+            )
+            db.add(reviewer_user)
+            db.flush()
+
+        # E: Seed Verified Proof Story if not present
+        sample_proof = db.query(PublicProofRecord).first()
+        if not sample_proof:
+            proof_ref = "ADH-2026-MSR-0001"
+            comp = db.query(Complaint).filter(Complaint.public_reference == proof_ref).first()
+            if not comp:
+                from datetime import datetime, timezone, timedelta
+                now = datetime.now(timezone.utc)
+                comp = Complaint(
+                    public_reference=proof_ref,
+                    citizen_id=citizen.id,
+                    category_id=cat_map["road_damage"].id,
+                    title="பெருமாள் கோவில் தெரு சாலை சேதம் மற்றும் குழி சீரமைப்பு",
+                    description="பெருமாள் கோவில் தெரு பிரதான சந்திப்பில் பெரிய சாலை குழி ஏற்பட்டு போக்குவரத்து பாதிக்கப்பட்டது.",
+                    language="ta",
+                    priority="HIGH",
+                    status="VERIFIED_RESOLVED",
+                    latitude=10.9410,
+                    longitude=78.4430,
+                    address_text="பெருமாள் கோவில் தெரு, வார்டு 3, முசிறி",
+                    ward_id=ward_map[3].id,
+                    assigned_department_id=dept_map["DEPT_ROADS"].id,
+                    assigned_officer_id=officer_user.officer_profile.id if officer_user.officer_profile else None,
+                    due_at=now + timedelta(hours=48),
+                    resolved_at=now,
+                    created_at=now - timedelta(hours=36)
+                )
+                db.add(comp)
+                db.flush()
+
+                # Add before & after evidence
+                ev_before = ComplaintEvidence(
+                    complaint_id=comp.id,
+                    phase="INITIAL_SUBMISSION",
+                    media_type="IMAGE",
+                    file_path="sample_pothole_before.jpg",
+                    file_url="https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&auto=format&fit=crop&q=80",
+                    mime_type="image/jpeg",
+                    file_size_bytes=1048576,
+                    perceptual_hash="8f8f0000ffff1111",
+                    exif_lat=10.9410,
+                    exif_lon=78.4430
+                )
+                ev_after = ComplaintEvidence(
+                    complaint_id=comp.id,
+                    phase="RESOLUTION_PROOF",
+                    media_type="IMAGE",
+                    file_path="sample_pothole_after.jpg",
+                    file_url="https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80",
+                    mime_type="image/jpeg",
+                    file_size_bytes=1048576,
+                    perceptual_hash="1111ffff00008f8f",
+                    exif_lat=10.9410,
+                    exif_lon=78.4430
+                )
+                db.add(ev_before)
+                db.add(ev_after)
+                db.flush()
+
+                # Verification Request
+                v_req = VerificationRequest(
+                    complaint_id=comp.id,
+                    status="PASSED",
+                    ai_visual_delta_score=0.88,
+                    phash_match_detected=False,
+                    gps_distance_delta_meters=4.2,
+                    audit_notes="Before/after perceptual hash distance 58/64 indicates distinct states. Surface repair confirmed.",
+                    reviewer_override_notes="Field inspection verified complete asphalt patch work. Public proof approved.",
+                    reviewed_by=reviewer_user.id,
+                    reviewed_at=now
+                )
+                db.add(v_req)
+                db.flush()
+
+                # Public Proof Record
+                proof = PublicProofRecord(
+                    complaint_id=comp.id,
+                    public_reference=proof_ref,
+                    category_name="சாலை சேதம் / பள்ளங்கள்",
+                    approximate_lat=10.941,
+                    approximate_lon=78.443,
+                    ward_name="பெருமாள் கோவில் தெரு (வார்டு 3)",
+                    submitted_date=comp.created_at,
+                    resolved_date=now,
+                    turnaround_hours=36.0,
+                    before_image_url="https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&auto=format&fit=crop&q=80",
+                    after_image_url="https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80",
+                    verification_summary="முசிறி நகராட்சி நெடுஞ்சாலைத் துறை மூலம் தார் கலவை கொண்டு குழி முழுமையாக மூடப்பட்டு, சுயாதீன சரிபார்ப்பு நிறைவடைந்துள்ளது.",
+                    qr_code_url=f"/api/v1/public/proof/{proof_ref}/qr",
+                    published_at=now
+                )
+                db.add(proof)
 
         db.commit()
     finally:

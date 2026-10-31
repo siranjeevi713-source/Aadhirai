@@ -59,18 +59,55 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.phone == payload.phone).first()
+    login_id = payload.identifier or payload.phone
+    user = None
+    if login_id:
+        if "@" in login_id:
+            user = db.query(User).filter(User.email == login_id.strip()).first()
+        else:
+            cleaned = login_id.strip()
+            user = db.query(User).filter(User.phone == cleaned).first()
+            if not user and not cleaned.startswith("+"):
+                user = db.query(User).filter(User.phone == f"+91{cleaned}").first()
+            if not user and cleaned.startswith("+91"):
+                user = db.query(User).filter(User.phone == cleaned[3:]).first()
+
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid phone number or password"
         )
+
     
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account has been suspended"
         )
+
+    # Validate expected role if provided by frontend
+    user_role_names = [r.name.lower() for r in user.roles]
+    if payload.expected_role:
+        expected = payload.expected_role.strip().lower()
+        if expected not in user_role_names:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Unauthorized role selection: This account does not possess '{payload.expected_role}' privileges."
+            )
+
+    # Validate expected department for officer login if provided
+    if payload.expected_department_id:
+        if "officer" in user_role_names:
+            if not user.officer_profile or str(user.officer_profile.department_id) != str(payload.expected_department_id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Unauthorized department selection: Account is not assigned to the selected municipal department."
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Department selection is only valid for authorized department officers."
+            )
 
     token = create_access_token(
         subject=user.id,

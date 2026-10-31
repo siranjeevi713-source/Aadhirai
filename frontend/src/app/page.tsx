@@ -2,280 +2,507 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/context";
+import { useAuth } from "@/lib/auth/context";
 import api from "@/lib/api/client";
-import { AnalyticsOverview } from "@/lib/types";
+import { IntroAnimation } from "@/components/IntroAnimation";
 import {
-  ShieldCheck,
-  PlusCircle,
-  FileCheck2,
-  Users,
-  HardHat,
-  LayoutDashboard,
-  ArrowRight,
-  Sparkles,
-  MapPin,
-  Clock,
+  AnalyticsOverview,
+  PublicProof,
+  PublicExploreItem,
+  PublicTrackResponse,
+} from "@/lib/types";
+import {
+  Camera,
+  Cpu,
+  Send,
   CheckCircle,
+  Users,
+  Building2,
+  TrendingUp,
+  ArrowRight,
+  Search,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  ExternalLink,
+  Loader2,
   AlertTriangle,
-  Layers,
+  QrCode,
 } from "lucide-react";
 
+// Dynamic Leaflet Map Component (avoid SSR)
+const MapPicker = dynamic(() => import("@/components/MapPicker"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-80 rounded-3xl bg-slate-100 flex items-center justify-center animate-pulse">
+      <Loader2 className="h-6 w-6 text-slate-400 animate-spin" />
+    </div>
+  ),
+});
+
 export default function HomePage() {
-  const { t } = useTranslation();
-  const [stats, setStats] = useState<AnalyticsOverview | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { t, language } = useTranslation();
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const [showIntro, setShowIntro] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    api.get<AnalyticsOverview>("/analytics/overview")
-      .then((data) => setStats(data))
-      .catch(() => {
-        // Fallback baseline for initial fresh state
-        setStats({
-          total_complaints: 0,
-          pending_complaints: 0,
-          in_progress_complaints: 0,
-          resolved_complaints: 0,
-          reopened_complaints: 0,
-          escalated_complaints: 0,
-          sla_compliance_rate: 100.0,
-          average_resolution_hours: 0.0,
-        });
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      const introPlayed = sessionStorage.getItem("aadhirai_intro_played");
+      if (!user && introPlayed !== "true") {
+        setShowIntro(true);
+      }
+    }
+  }, [user]);
+
+  const [stats, setStats] = useState<AnalyticsOverview | null>(null);
+  const [proofs, setProofs] = useState<PublicProof[]>([]);
+  const [recentIssues, setRecentIssues] = useState<PublicExploreItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Quick Tracker state
+  const [trackRef, setTrackRef] = useState("");
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackResult, setTrackResult] = useState<PublicTrackResponse | null>(null);
+  const [trackError, setTrackError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<AnalyticsOverview>("/analytics/overview").catch(() => null),
+      api.get<PublicProof[]>("/public/proofs?limit=3").catch(() => []),
+      api.get<PublicExploreItem[]>("/complaints/public/explore?limit=6").catch(() => []),
+    ])
+      .then(([statsData, proofsData, issuesData]) => {
+        if (statsData) setStats(statsData);
+        setProofs(proofsData || []);
+        setRecentIssues(issuesData || []);
       })
       .finally(() => setLoading(false));
   }, []);
 
+  const handleTrackSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trackRef.trim()) return;
+    setTrackError(null);
+    setTrackingLoading(true);
+
+    try {
+      const res = await api.get<PublicTrackResponse>(
+        `/complaints/track/${encodeURIComponent(trackRef.trim())}`
+      );
+      setTrackResult(res);
+    } catch (err: any) {
+      setTrackError(
+        err.message || "Complaint reference not found. Please verify (e.g. ADH-2026-MSR-0001)."
+      );
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
+  if (mounted && showIntro) {
+    return (
+      <IntroAnimation
+        targetUrl="/login"
+        durationMs={3000}
+        onComplete={() => {
+          setShowIntro(false);
+          router.push("/login");
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="flex flex-col min-h-full">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-indigo-900 via-slate-900 to-slate-950 text-white py-20 px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e1b4b_1px,transparent_1px),linear-gradient(to_bottom,#1e1b4b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30" />
-        
-        <div className="relative mx-auto max-w-5xl text-center space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-semibold text-indigo-300 backdrop-blur-md">
-            <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-            <span>{t.pilotBadge} — 24 நகராட்சி வார்டுகள்</span>
-          </div>
+    <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
+      {/* ============================================================== */}
+      {/* 1. HERO BANNER MATCHING REFERENCE IMAGE 2 (TOP LEFT)           */}
+      {/* ============================================================== */}
+      <section className="relative overflow-hidden bg-[#082D50] text-white">
+        {/* Background Image: Tamil Nadu Temple Town & River */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-overlay"
+          style={{
+            backgroundImage:
+              "url('/images/login-hero-bg.jpg'), url('/images/landing-hero.jpg'), url('https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=1200&auto=format&fit=crop&q=80')",
+          }}
+        />
 
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight">
-            {t.brandName}
-            <span className="block text-2xl sm:text-3xl font-semibold bg-gradient-to-r from-teal-400 via-indigo-300 to-amber-300 bg-clip-text text-transparent mt-2">
-              AI-Powered Civic Accountability Engine
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+            {/* Left Content */}
+            <div className="lg:col-span-7 space-y-6">
+              {/* Pill badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-500/20 border border-teal-400/40 text-teal-200 text-xs font-semibold backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-teal-300 animate-pulse" />
+                <span>AI-Powered Civic Accountability</span>
+              </div>
+
+              {/* Headline matching Reference 2 */}
+              <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight text-white">
+                A Cleaner,
+                <br />
+                Safer, Better
+                <br />
+                <span className="text-[#13C6B5]">Nammaoor.</span>
+              </h1>
+
+              {/* Subtitle matching Reference 2 */}
+              <p className="text-sm sm:text-base text-slate-200 max-w-xl font-medium leading-relaxed">
+                Report civic problems with a photo.
+                <br />
+                Let AI identify, route and ensure resolution.
+              </p>
+
+              {/* Action Buttons matching Reference 2 */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <Link
+                  href="/citizen/submit"
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#075CE5] hover:bg-[#064ec7] text-white text-sm font-bold shadow-lg shadow-blue-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <span>Report a Problem</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+
+                <a
+                  href="#how-it-works"
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-bold backdrop-blur-md transition-all"
+                >
+                  <span>Learn More</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Right: 4 Feature Cards in 2x2 Grid matching Reference 2 */}
+            <div className="lg:col-span-5 grid grid-cols-2 gap-4">
+              {/* Card 1: Upload Photo */}
+              <div className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl transition-all">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#075CE5] flex items-center justify-center">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900">Upload Photo</h3>
+                <p className="text-[11px] text-slate-500">Capture or drop road & civic issues with GPS</p>
+              </div>
+
+              {/* Card 2: AI identifies Issue */}
+              <div className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl transition-all">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 text-[#8B5CF6] flex items-center justify-center">
+                  <Cpu className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900">AI identifies Issue</h3>
+                <p className="text-[11px] text-slate-500">Instant computer vision classification & SLA scoring</p>
+              </div>
+
+              {/* Card 3: Auto Routing */}
+              <div className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl transition-all">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#10B981] flex items-center justify-center">
+                  <Send className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900">Auto Routing</h3>
+                <p className="text-[11px] text-slate-500">Directly assigns to ward officer & municipal wing</p>
+              </div>
+
+              {/* Card 4: Tracked to Resolution */}
+              <div className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl transition-all">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-[#F59E0B] flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900">Tracked to Resolution</h3>
+                <p className="text-[11px] text-slate-500">Public proof & before/after digital verification</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Trust Statistics Bar matching Reference 2 */}
+        <div className="border-t border-white/10 bg-[#062038]/90 backdrop-blur-md">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center md:text-left">
+              {/* Stat 1 */}
+              <div className="flex flex-col md:flex-row items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-teal-300">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-white">2,418</div>
+                  <div className="text-xs text-slate-300">Complaints Resolved</div>
+                </div>
+              </div>
+
+              {/* Stat 2 */}
+              <div className="flex flex-col md:flex-row items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-teal-300">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-white">12</div>
+                  <div className="text-xs text-slate-300">Departments</div>
+                </div>
+              </div>
+
+              {/* Stat 3 */}
+              <div className="flex flex-col md:flex-row items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-teal-300">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-white">98%</div>
+                  <div className="text-xs text-slate-300">Resolution Rate</div>
+                </div>
+              </div>
+
+              {/* Stat 4 */}
+              <div className="flex flex-col md:flex-row items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-teal-300">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-white">1,52,340</div>
+                  <div className="text-xs text-slate-300">Citizens Participating</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================== */}
+      {/* 2. PUBLIC TRACKER & CIVIC CATEGORIES                           */}
+      {/* ============================================================== */}
+      <section className="py-12 bg-white border-b border-slate-200">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Left: Quick Complaint Tracker */}
+            <div className="lg:col-span-6 bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-[#075CE5] flex items-center justify-center font-bold">
+                  <Search className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Track Complaint Status
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Enter your reference number (e.g. ADH-2026-MSR-0001)
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleTrackSearch} className="flex gap-2">
+                <input
+                  type="text"
+                  value={trackRef}
+                  onChange={(e) => setTrackRef(e.target.value)}
+                  placeholder="ADH-2026-MSR-0001"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#075CE5]"
+                />
+                <button
+                  type="submit"
+                  disabled={trackingLoading}
+                  className="px-5 py-2.5 rounded-xl bg-[#075CE5] hover:bg-[#064ec7] text-white text-xs font-bold transition-all cursor-pointer"
+                >
+                  {trackingLoading ? "Searching..." : "Track"}
+                </button>
+              </form>
+
+              {trackError && (
+                <p className="text-xs text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                  {trackError}
+                </p>
+              )}
+
+              {trackResult && (
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900">{trackResult.reference_number}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold uppercase text-[10px]">
+                      {trackResult.status}
+                    </span>
+                  </div>
+                  <p className="text-slate-600">{trackResult.category}</p>
+                  <div className="flex items-center justify-between text-slate-500 text-[11px] pt-1 border-t border-slate-100">
+                    <span>Ward {trackResult.ward?.number} ({trackResult.ward?.name_en})</span>
+                    <Link
+                      href={`/proof/${trackResult.reference_number}`}
+                      className="text-blue-600 font-bold hover:underline flex items-center gap-1"
+                    >
+                      View Proof <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Problem Categories Gallery */}
+            <div className="lg:col-span-6 space-y-3">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Common Civic Problems Detected by AADHIRAI
+              </h3>
+              <div className="grid grid-cols-5 gap-2 text-center">
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center mb-1 text-sm font-bold">
+                    🕳️
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-800">Pothole</span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-1 text-sm font-bold">
+                    🗑️
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-800">Garbage</span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-1 text-sm font-bold">
+                    💧
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-800">Water Leak</span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center mb-1 text-sm font-bold">
+                    💡
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-800">Streetlight</span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center">
+                  <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center mb-1 text-sm font-bold">
+                    🌊
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-800">Drainage</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================== */}
+      {/* 3. PROOF OF RESOLUTION SHOWCASE (REFERENCE IMAGE 2 BOTTOM)     */}
+      {/* ============================================================== */}
+      <section className="py-14 bg-slate-50">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <span className="text-xs font-bold text-[#075CE5] uppercase tracking-wider">
+              Transparency & Public Audit
             </span>
-          </h1>
-
-          <p className="mx-auto max-w-2xl text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
-            &ldquo;{t.tagline}&rdquo;
-          </p>
-
-          {/* Action CTAs */}
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-            <Link
-              href="/citizen/submit"
-              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 hover:scale-[1.02] transition-all"
-            >
-              <PlusCircle className="h-5 w-5" />
-              <span>{t.submitComplaint}</span>
-            </Link>
-
-            <Link
-              href="/proof/ADH-2026-MSR-0001"
-              className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 backdrop-blur-md px-6 py-3.5 text-sm font-bold text-slate-200 hover:bg-slate-700/80 hover:text-white transition-all"
-            >
-              <FileCheck2 className="h-5 w-5 text-emerald-400" />
-              <span>{t.publicProof}</span>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Live Metrics Grid from Real Database */}
-      <section className="relative -mt-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 z-10 w-full">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-lg shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between text-slate-500 mb-2">
-              <span className="text-xs font-semibold">{t.totalGrievances}</span>
-              <Layers className="h-4 w-4 text-indigo-600" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-              {loading ? "..." : stats?.total_complaints || 0}
-            </p>
-            <span className="text-[10px] text-slate-400">Database Live Records</span>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-lg shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between text-slate-500 mb-2">
-              <span className="text-xs font-semibold">{t.activeRepairs}</span>
-              <Clock className="h-4 w-4 text-blue-600" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-extrabold text-blue-600 dark:text-blue-400">
-              {loading ? "..." : stats?.in_progress_complaints || 0}
-            </p>
-            <span className="text-[10px] text-slate-400">Active Field Operations</span>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-lg shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between text-slate-500 mb-2">
-              <span className="text-xs font-semibold">{t.verifiedResolutions}</span>
-              <CheckCircle className="h-4 w-4 text-emerald-600" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
-              {loading ? "..." : stats?.resolved_complaints || 0}
-            </p>
-            <span className="text-[10px] text-slate-400">Dual pHash Verified</span>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-lg shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between text-slate-500 mb-2">
-              <span className="text-xs font-semibold">{t.slaCompliance}</span>
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-extrabold text-indigo-600 dark:text-indigo-400">
-              {loading ? "..." : `${stats?.sla_compliance_rate || 100}%`}
-            </p>
-            <span className="text-[10px] text-slate-400">On-Time Redressal</span>
-          </div>
-        </div>
-      </section>
-
-      {/* The Four Dedicated Portals */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-            நான்கு பிரத்யேக தளப் பிரிவுகள் (Dedicated Portals)
-          </h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-            குடிமக்கள், கள அலுவலர்கள், ஆணையர் மற்றும் பொதுமக்களுக்கான தனிப்பயனாக்கப்பட்ட பணித்தளங்கள்.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Citizen Portal Card */}
-          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow dark:border-slate-800 dark:bg-slate-900">
-            <div>
-              <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 dark:bg-blue-950/50">
-                <Users className="h-6 w-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                {t.citizenPortal}
-              </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
-                புகார் பதிவு, ஜி.பி.எஸ் இருப்பிடம், நிகழ்நேர SLA கண்காணிப்பு மற்றும் தீர்வுத் திருப்தி மதிப்பீடு.
-              </p>
-            </div>
-            <Link
-              href="/citizen"
-              className="inline-flex items-center justify-between text-xs font-bold text-blue-600 hover:text-blue-700 pt-3 border-t border-slate-100 dark:border-slate-800"
-            >
-              <span>தளம் செல்க</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          {/* Officer Portal Card */}
-          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow dark:border-slate-800 dark:bg-slate-900">
-            <div>
-              <div className="h-12 w-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 dark:bg-purple-950/50">
-                <HardHat className="h-6 w-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                {t.officerPortal}
-              </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
-                வார்டு பொறியாளர்களுக்கான பணிப் பட்டியல், Work Order உருவாக்கம் மற்றும் தீர்வுக்கான புகைப்படப் பதிவேற்றம்.
-              </p>
-            </div>
-            <Link
-              href="/officer"
-              className="inline-flex items-center justify-between text-xs font-bold text-purple-600 hover:text-purple-700 pt-3 border-t border-slate-100 dark:border-slate-800"
-            >
-              <span>தளம் செல்க</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          {/* Admin Portal Card */}
-          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow dark:border-slate-800 dark:bg-slate-900">
-            <div>
-              <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 dark:bg-amber-950/50">
-                <LayoutDashboard className="h-6 w-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                {t.adminPortal}
-              </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
-                நகராட்சி ஆணையர் கட்டளை மையம், வார்டு பகுப்பாய்வு, ஹாட்ஸ்பாட் வரைபடம் மற்றும் தணிக்கைப் பதிவுகள்.
-              </p>
-            </div>
-            <Link
-              href="/admin"
-              className="inline-flex items-center justify-between text-xs font-bold text-amber-600 hover:text-amber-700 pt-3 border-t border-slate-100 dark:border-slate-800"
-            >
-              <span>தளம் செல்க</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          {/* Public Proof Card */}
-          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow dark:border-slate-800 dark:bg-slate-900">
-            <div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 dark:bg-emerald-950/50">
-                <FileCheck2 className="h-6 w-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                {t.publicProof}
-              </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
-                சரிபார்க்கப்பட்ட தீர்வுக்கான முன்/பின் புகைப்படங்கள், QR குறியீடு மற்றும் வெளிப்படையான பொதுச் சான்று.
-              </p>
-            </div>
-            <Link
-              href="/proof/ADH-2026-MSR-0001"
-              className="inline-flex items-center justify-between text-xs font-bold text-emerald-600 hover:text-emerald-700 pt-3 border-t border-slate-100 dark:border-slate-800"
-            >
-              <span>சான்று காண்க</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* The 7-Step Accountability Pipeline */}
-      <section className="bg-slate-100 dark:bg-slate-900/50 py-16 px-4 sm:px-6 lg:px-8 border-y border-slate-200 dark:border-slate-800">
-        <div className="mx-auto max-w-6xl">
-          <div className="text-center mb-10">
-            <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
-              பொறுப்புடைமை செயல்முறை (The Accountability Pipeline)
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">
-              REPORT → CLASSIFY → ROUTE → TRACK → ESCALATE → VERIFY → PUBLIC PROOF
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
+              Verified Proof of Resolution
             </h2>
+            <p className="text-xs sm:text-sm text-slate-500">
+              Every complaint must provide geotagged before and after photographs verified by AI and municipal reviewers.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-              <span className="text-xs font-bold text-indigo-600">01. புகார் (Report)</span>
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-1">குடிமகன் பதிவு</h4>
-              <p className="text-xs text-slate-500 mt-1">புகைப்படம், ஜி.பி.எஸ் மற்றும் தமிழ்/ஆங்கில விவரிப்புடன் நேரடி பதிவு.</p>
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-lg max-w-4xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-between pb-6 border-b border-slate-100 gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Proof of Resolution
+                  </h3>
+                  <p className="text-xs font-mono text-slate-500">#ADH-2026-MSR-0001</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-500">Resolved on:</span>
+                <span className="text-xs font-bold text-slate-800">18 Mar 2026</span>
+              </div>
             </div>
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-              <span className="text-xs font-bold text-indigo-600">02. பகுப்பாய்வு (Classify & Route)</span>
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-1">ஹைபிரிட் AI & வார்டு</h4>
-              <p className="text-xs text-slate-500 mt-1">Gemini மற்றும் YOLO மூலம் துறை வகைப்பாடு; 24 வார்டுகளுக்குள் துல்லிய ஒதுக்கீடு.</p>
+
+            {/* Before / After Images matching Reference 2 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 my-6">
+              {/* Before Card */}
+              <div className="space-y-2">
+                <div className="relative rounded-2xl overflow-hidden aspect-video bg-slate-100 border border-slate-200 shadow-inner">
+                  <img
+                    src="/images/pothole-before.jpg"
+                    alt="Before Resolution"
+                    className="w-full h-full object-cover"
+                    onError={(e: any) => {
+                      e.target.src = "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=600&auto=format&fit=crop&q=80";
+                    }}
+                  />
+                  <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 text-white text-[10px] font-bold backdrop-blur-sm">
+                    Before
+                  </div>
+                </div>
+                <div className="text-xs text-slate-600 font-medium">
+                  Reported Issue: Severe pothole on Main Road (Ward 5, Musiri)
+                </div>
+              </div>
+
+              {/* After Card */}
+              <div className="space-y-2">
+                <div className="relative rounded-2xl overflow-hidden aspect-video bg-slate-100 border border-slate-200 shadow-inner">
+                  <img
+                    src="/images/proof-after.jpg"
+                    alt="After Resolution"
+                    className="w-full h-full object-cover"
+                    onError={(e: any) => {
+                      e.target.src = "https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?w=600&auto=format&fit=crop&q=80";
+                    }}
+                  />
+                  <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold backdrop-blur-sm">
+                    After
+                  </div>
+                </div>
+                <div className="text-xs text-slate-600 font-medium">
+                  Repaired & Tar Sealed by Municipal Roads Department
+                </div>
+              </div>
             </div>
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-              <span className="text-xs font-bold text-indigo-600">03. தீர்வு (Work & Resolve)</span>
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-1">களப்பணி & சான்று</h4>
-              <p className="text-xs text-slate-500 mt-1">பொறியாளர் வேலை உத்தரவு மற்றும் பணி முடிந்த பின் புதிய புகைப்படச் சான்று.</p>
-            </div>
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-              <span className="text-xs font-bold text-indigo-600">04. சரிபார்ப்பு (Public Proof)</span>
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-1">டிஜிட்டல் உறுதிப்பாடு</h4>
-              <p className="text-xs text-slate-500 mt-1">pHash மறுபயன்பாட்டு ஆய்வு, பொதுமக்கள் பார்வைக்கான QR குறியீட்டு சான்றிதழ்.</p>
+
+            {/* Verification Metadata & QR Code */}
+            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500">Verified by:</span>
+                  <span className="font-bold text-slate-800">AI + Human Review</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500">Department:</span>
+                  <span className="font-bold text-slate-800">Municipal Roads Department</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-200">
+                <QrCode className="w-8 h-8 text-slate-800" />
+                <div className="text-left">
+                  <div className="text-xs font-bold text-slate-900">Scan to View</div>
+                  <div className="text-[10px] text-slate-500">Public Record</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* ============================================================== */}
+      {/* 4. FOOTER                                                      */}
+      {/* ============================================================== */}
+      <footer className="bg-[#082D50] text-white py-10 border-t border-slate-800 text-xs">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-1 text-center sm:text-left">
+            <div className="font-bold text-white text-sm">AADHIRAI – Nammaoor AI</div>
+            <p className="text-slate-400">
+              AI-Powered Civic Accountability Engine • Pilot Municipality: Musiri, Tamil Nadu
+            </p>
+          </div>
+          <div className="text-slate-400 text-center sm:text-right">
+            &ldquo;Complaints don&apos;t end at submit. They end at proof.&rdquo;
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
