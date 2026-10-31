@@ -183,40 +183,52 @@ export default function HomePage() {
             {/* Right: 4 Feature Cards in 2x2 Grid matching Reference 2 */}
             <div className="lg:col-span-5 grid grid-cols-2 gap-4">
               {/* Card 1: Upload Photo */}
-              <div className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl transition-all">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#075CE5] flex items-center justify-center">
+              <Link
+                href="/citizen/submit"
+                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#075CE5] group-hover:scale-110 flex items-center justify-center transition-transform">
                   <Camera className="w-5 h-5" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">Upload Photo</h3>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#075CE5] transition-colors">Upload Photo</h3>
                 <p className="text-[11px] text-slate-500">Capture or drop road & civic issues with GPS</p>
-              </div>
+              </Link>
 
               {/* Card 2: AI identifies Issue */}
-              <div className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl transition-all">
-                <div className="w-10 h-10 rounded-xl bg-purple-50 text-[#8B5CF6] flex items-center justify-center">
+              <Link
+                href="/citizen/submit"
+                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-purple-50 text-[#8B5CF6] group-hover:scale-110 flex items-center justify-center transition-transform">
                   <Cpu className="w-5 h-5" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">AI identifies Issue</h3>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#8B5CF6] transition-colors">AI identifies Issue</h3>
                 <p className="text-[11px] text-slate-500">Instant computer vision classification & SLA scoring</p>
-              </div>
+              </Link>
 
               {/* Card 3: Auto Routing */}
-              <div className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl transition-all">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#10B981] flex items-center justify-center">
+              <Link
+                href="/#how-it-works"
+                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#10B981] group-hover:scale-110 flex items-center justify-center transition-transform">
                   <Send className="w-5 h-5" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">Auto Routing</h3>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#10B981] transition-colors">Auto Routing</h3>
                 <p className="text-[11px] text-slate-500">Directly assigns to ward officer & municipal wing</p>
-              </div>
+              </Link>
 
               {/* Card 4: Tracked to Resolution */}
-              <div className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl transition-all">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-[#F59E0B] flex items-center justify-center">
+              <Link
+                href="/explore"
+                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-[#F59E0B] group-hover:scale-110 flex items-center justify-center transition-transform">
                   <CheckCircle className="w-5 h-5" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">Tracked to Resolution</h3>
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#F59E0B] transition-colors">Tracked to Resolution</h3>
                 <p className="text-[11px] text-slate-500">Public proof & before/after digital verification</p>
-              </div>
+              </Link>
             </div>
           </div>
         </div>
