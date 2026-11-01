@@ -24,7 +24,7 @@ router.put('/departments/:id', ...SA, updateDepartment);
 
 // Users
 router.get('/users', ...SA, getUsers);
-router.post('/users/provision', ...SA, createPrivilegedUser);
+router.post(['/users', '/users/provision'], ...SA, createPrivilegedUser);
 router.patch('/users/:id/toggle', ...SA, toggleUser);
 router.patch('/users/:id/reset-password', ...SA, resetPassword);
 

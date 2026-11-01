@@ -71,3 +71,4 @@ export default function MyComplaintsPage() {
     </div>
   )
 }
+

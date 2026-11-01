@@ -6,7 +6,12 @@ const bcrypt = require('bcryptjs');
 // POST /api/auth/register (citizen only)
 async function register(req, res) {
   try {
-    const { name, email, mobile, password, homeDistrictId, consent } = req.body;
+    const name = req.body.name || req.body.fullName;
+    const email = req.body.email;
+    const mobile = req.body.mobile || req.body.mobileNumber;
+    const password = req.body.password;
+    const homeDistrictId = req.body.homeDistrictId;
+    const consent = req.body.consent !== undefined ? req.body.consent : true;
 
     if (!name || !email || !mobile || !password) {
       return res.status(400).json({ success: false, message: 'Name, email, mobile, and password are required.' });
@@ -21,9 +26,9 @@ async function register(req, res) {
       return res.status(400).json({ success: false, message: 'Mobile number must be exactly 10 digits.' });
     }
 
-    const existing = await User.findOne({ $or: [{ email }, { mobile }] });
+    const existing = await User.findOne({ $or: [{ email: email.toLowerCase().trim() }, { mobile }] });
     if (existing) {
-      const field = existing.email === email ? 'Email' : 'Mobile number';
+      const field = existing.email === email.toLowerCase().trim() ? 'Email' : 'Mobile number';
       return res.status(409).json({ success: false, message: `${field} is already registered.` });
     }
 
@@ -55,7 +60,15 @@ async function register(req, res) {
 // POST /api/auth/login
 async function login(req, res) {
   try {
-    const { email, mobile, password } = req.body;
+    let { email, mobile, password, identifier } = req.body;
+
+    if (identifier) {
+      if (identifier.includes('@')) {
+        email = identifier;
+      } else {
+        mobile = identifier;
+      }
+    }
 
     if (!password || (!email && !mobile)) {
       return res.status(400).json({ success: false, message: 'Email or mobile and password are required.' });

@@ -8,7 +8,7 @@ async function getPendingReviews(req, res) {
 
   // Reviewer scoped to assigned district
   if (user.role === 'reviewer' && user.assignedDistrictId) {
-    filter.incidentDistrictId = user.assignedDistrictId;
+    filter.incidentDistrictId = user.assignedDistrictId?._id || user.assignedDistrictId;
   }
 
   const complaints = await Complaint.find(filter)
@@ -36,7 +36,9 @@ async function reviewDecision(req, res) {
 
     // Scope check
     if (req.user.role === 'reviewer' && req.user.assignedDistrictId) {
-      if (complaint.incidentDistrictId?.toString() !== req.user.assignedDistrictId?.toString()) {
+      const userDistId = req.user.assignedDistrictId?._id?.toString() || req.user.assignedDistrictId?.toString();
+      const compDistId = complaint.incidentDistrictId?._id?.toString() || complaint.incidentDistrictId?.toString();
+      if (compDistId !== userDistId) {
         return res.status(403).json({ success: false, message: 'Not authorized to review this district.' });
       }
     }

@@ -100,7 +100,13 @@ async function getUsers(req, res) {
 
 async function createPrivilegedUser(req, res) {
   try {
-    const { name, email, mobile, password, role, assignedDistrictId, departmentId } = req.body;
+    const name = req.body.name || req.body.fullName;
+    const email = req.body.email;
+    const mobile = req.body.mobile || req.body.mobileNumber;
+    const password = req.body.password;
+    const role = req.body.role;
+    const assignedDistrictId = req.body.assignedDistrictId;
+    const departmentId = req.body.departmentId || req.body.assignedDepartmentId;
 
     if (!['department_admin', 'reviewer'].includes(role)) {
       return res.status(400).json({ success: false, message: 'Only department_admin or reviewer roles can be provisioned here.' });

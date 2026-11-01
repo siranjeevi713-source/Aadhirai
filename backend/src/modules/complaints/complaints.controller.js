@@ -60,8 +60,11 @@ async function analyzeImage(req, res) {
 // POST /api/complaints — submit a new complaint
 async function submitComplaint(req, res) {
   try {
+    const lat = req.body.lat !== undefined ? req.body.lat : req.body.latitude;
+    const lng = req.body.lng !== undefined ? req.body.lng : req.body.longitude;
+    const incidentAddress = req.body.incidentAddress || req.body.addressText;
     const {
-      lat, lng, incidentAddress, citizenConfirmedCategory,
+      citizenConfirmedCategory,
       aiPredictedCategory, aiConfidence, aiExplanation, aiModelVersion,
       title, description, severity,
       beforeImageUrl, beforeImageName,
@@ -170,11 +173,16 @@ async function submitComplaint(req, res) {
       message: 'Complaint submitted successfully.',
       data: {
         id: complaint._id,
+        _id: complaint._id,
         ticketNumber: complaint.ticketNumber,
         status: complaint.status,
         incidentDistrict: nearestDistrict?.name || null,
+        incidentDistrictId: complaint.incidentDistrictId,
+        departmentId: complaint.departmentId,
         departmentRouted: !!departmentId,
+        complaint,
       },
+      complaint,
     });
   } catch (err) {
     console.error('[Complaints:submit]', err);
@@ -225,7 +233,7 @@ async function getDepartmentComplaints(req, res) {
 
   const filter = {};
   if (user.role === 'department_admin') {
-    filter.departmentId = user.departmentId;
+    filter.departmentId = user.departmentId?._id || user.departmentId;
   }
   if (status) filter.status = status;
 
@@ -251,7 +259,9 @@ async function updateComplaintStatus(req, res) {
 
     // Department admin scope check
     if (user.role === 'department_admin') {
-      if (complaint.departmentId?.toString() !== user.departmentId?.toString()) {
+      const userDeptId = user.departmentId?._id?.toString() || user.departmentId?.toString();
+      const compDeptId = complaint.departmentId?._id?.toString() || complaint.departmentId?.toString();
+      if (compDeptId !== userDeptId) {
         return res.status(403).json({ success: false, message: 'Not authorized for this complaint.' });
       }
     }
