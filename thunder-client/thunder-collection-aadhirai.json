@@ -1,0 +1,122 @@
+{
+  "clientName": "Thunder Client",
+  "collectionName": "AADHIRAI MERN API Collection",
+  "collectionId": "aadhirai-mern-v2",
+  "dateExported": "2026-11-01T06:05:00.000Z",
+  "version": "1.1",
+  "folders": [
+    {
+      "name": "Auth",
+      "id": "fld_auth"
+    },
+    {
+      "name": "Super Admin",
+      "id": "fld_superadmin"
+    },
+    {
+      "name": "Complaints & AI",
+      "id": "fld_complaints"
+    },
+    {
+      "name": "Reviews",
+      "id": "fld_reviews"
+    },
+    {
+      "name": "Analytics",
+      "id": "fld_analytics"
+    }
+  ],
+  "requests": [
+    {
+      "name": "Health Check",
+      "method": "GET",
+      "url": "http://localhost:5000/health"
+    },
+    {
+      "name": "Super Admin Login",
+      "folder": "fld_auth",
+      "method": "POST",
+      "url": "http://localhost:5000/api/auth/login",
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"identifier\": \"superadmin@aadhirai.gov.in\",\n  \"password\": \"Aadhirai@2026\"\n}"
+      }
+    },
+    {
+      "name": "Citizen Register",
+      "folder": "fld_auth",
+      "method": "POST",
+      "url": "http://localhost:5000/api/auth/register",
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"fullName\": \"Senthil Kumar\",\n  \"email\": \"citizen.test@aadhirai.tn.gov.in\",\n  \"mobileNumber\": \"9876543210\",\n  \"password\": \"Password123!\"\n}"
+      }
+    },
+    {
+      "name": "Get Current User Profile",
+      "folder": "fld_auth",
+      "method": "GET",
+      "url": "http://localhost:5000/api/auth/me"
+    },
+    {
+      "name": "List Districts (Super Admin)",
+      "folder": "fld_superadmin",
+      "method": "GET",
+      "url": "http://localhost:5000/api/super-admin/districts"
+    },
+    {
+      "name": "List Departments (Super Admin)",
+      "folder": "fld_superadmin",
+      "method": "GET",
+      "url": "http://localhost:5000/api/super-admin/departments"
+    },
+    {
+      "name": "Provision Department Admin",
+      "folder": "fld_superadmin",
+      "method": "POST",
+      "url": "http://localhost:5000/api/super-admin/users",
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"fullName\": \"Coimbatore Road Admin\",\n  \"email\": \"coimbatore.roads@aadhirai.gov.in\",\n  \"mobileNumber\": \"9876500001\",\n  \"password\": \"Officer@123\",\n  \"role\": \"department_admin\"\n}"
+      }
+    },
+    {
+      "name": "Analyze Image (Proxy to ML Service)",
+      "folder": "fld_complaints",
+      "method": "POST",
+      "url": "http://localhost:5000/api/complaints/analyze-image"
+    },
+    {
+      "name": "Submit Complaint (GIS Auto-Routing)",
+      "folder": "fld_complaints",
+      "method": "POST",
+      "url": "http://localhost:5000/api/complaints",
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"title\": \"Major Pothole on Cross Cut Road\",\n  \"description\": \"Deep pothole causing severe traffic disruption.\",\n  \"citizenConfirmedCategory\": \"ROAD_DAMAGE\",\n  \"latitude\": 11.0168,\n  \"longitude\": 76.9558,\n  \"addressText\": \"Cross Cut Road, Gandhipuram, Coimbatore\",\n  \"priority\": \"HIGH\"\n}"
+      }
+    },
+    {
+      "name": "Get Pending Reviews (Reviewer)",
+      "folder": "fld_reviews",
+      "method": "GET",
+      "url": "http://localhost:5000/api/reviews/pending"
+    },
+    {
+      "name": "Review Decision",
+      "folder": "fld_reviews",
+      "method": "POST",
+      "url": "http://localhost:5000/api/reviews/COMPLAINT_ID/decide",
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"decision\": \"APPROVED\",\n  \"notes\": \"Asphalt patch verified with GPS and timestamp matching incident spot.\"\n}"
+      }
+    },
+    {
+      "name": "Department Summary Analytics",
+      "folder": "fld_analytics",
+      "method": "GET",
+      "url": "http://localhost:5000/api/analytics/department-admin"
+    }
+  ]
+}

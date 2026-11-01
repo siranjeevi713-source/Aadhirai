@@ -62,3 +62,4 @@ All backend test suites green.
 - **Status**: Production Ready.
 - **Vercel Hosting**: Single-repository mono-repo deployment configured via `vercel.json` and PostgreSQL cloud connection string.
 - **GitHub Push**: Git commit is clean and ready to push to remote repository.
+

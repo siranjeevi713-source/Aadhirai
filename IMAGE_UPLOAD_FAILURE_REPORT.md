@@ -61,3 +61,4 @@ During multi-device and multi-format testing across desktop and mobile browsers,
 - **WEBP**: Verified (Lossy and Lossless).
 - **Corrupted / Truncated Files**: Rejected gracefully with HTTP 400 (`Invalid image data: cannot identify image file`).
 - **Oversized Files (>10MB)**: Rejected at client boundary and FastAPI `UploadFile` size guard with HTTP 413.
+

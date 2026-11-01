@@ -85,3 +85,4 @@ We engineered a resilient, deterministic 3-stage discrimination pipeline in `AIS
 ## 4. Verification
 
 This architecture was benchmarked against the 14-image golden test suite (`run_comprehensive_audit.py`). False positive rate on non-civic and clean images was reduced from **100% to 0%**, achieving an overall accuracy of **100.0%**.
+

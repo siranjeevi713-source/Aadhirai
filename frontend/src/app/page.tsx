@@ -128,14 +128,14 @@ export default function HomePage() {
       <section id="about" className="relative overflow-hidden bg-[#082D50] text-white">
         {/* Background Image: Tamil Nadu Temple Town & River */}
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-overlay"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-overlay pointer-events-none"
           style={{
             backgroundImage:
               "url('/images/login-hero-bg.jpg'), url('/images/landing-hero.jpg'), url('https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=1200&auto=format&fit=crop&q=80')",
           }}
         />
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             {/* Left Content */}
             <div className="lg:col-span-7 space-y-6">
@@ -165,7 +165,7 @@ export default function HomePage() {
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Link
                   href="/citizen/submit"
-                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#075CE5] hover:bg-[#064ec7] text-white text-sm font-bold shadow-lg shadow-blue-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#075CE5] hover:bg-[#064ec7] text-white text-sm font-bold shadow-lg shadow-blue-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                 >
                   <span>Report a Problem</span>
                   <ArrowRight className="h-4 w-4" />
@@ -173,7 +173,7 @@ export default function HomePage() {
 
                 <Link
                   href="/#how-it-works"
-                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-bold backdrop-blur-md transition-all"
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-bold backdrop-blur-md transition-all cursor-pointer"
                 >
                   <span>Learn More</span>
                 </Link>
@@ -181,13 +181,13 @@ export default function HomePage() {
             </div>
 
             {/* Right: 4 Feature Cards in 2x2 Grid matching Reference 2 */}
-            <div className="lg:col-span-5 grid grid-cols-2 gap-4">
+            <div className="relative z-20 lg:col-span-5 grid grid-cols-2 gap-4">
               {/* Card 1: Upload Photo */}
               <Link
                 href="/citizen/submit"
-                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group"
+                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group select-none"
               >
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#075CE5] group-hover:scale-110 flex items-center justify-center transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#075CE5] group-hover:scale-110 flex items-center justify-center transition-transform pointer-events-none">
                   <Camera className="w-5 h-5" />
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#075CE5] transition-colors">Upload Photo</h3>
@@ -197,9 +197,9 @@ export default function HomePage() {
               {/* Card 2: AI identifies Issue */}
               <Link
                 href="/citizen/submit"
-                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group"
+                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group select-none"
               >
-                <div className="w-10 h-10 rounded-xl bg-purple-50 text-[#8B5CF6] group-hover:scale-110 flex items-center justify-center transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 text-[#8B5CF6] group-hover:scale-110 flex items-center justify-center transition-transform pointer-events-none">
                   <Cpu className="w-5 h-5" />
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#8B5CF6] transition-colors">AI identifies Issue</h3>
@@ -209,9 +209,9 @@ export default function HomePage() {
               {/* Card 3: Auto Routing */}
               <Link
                 href="/#how-it-works"
-                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group"
+                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group select-none"
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#10B981] group-hover:scale-110 flex items-center justify-center transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#10B981] group-hover:scale-110 flex items-center justify-center transition-transform pointer-events-none">
                   <Send className="w-5 h-5" />
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#10B981] transition-colors">Auto Routing</h3>
@@ -221,9 +221,9 @@ export default function HomePage() {
               {/* Card 4: Tracked to Resolution */}
               <Link
                 href="/explore"
-                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group"
+                className="p-5 rounded-2xl bg-white text-slate-900 shadow-xl flex flex-col justify-center space-y-2 border border-slate-100 hover:shadow-2xl hover:-translate-y-1 transition-all cursor-pointer group select-none"
               >
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-[#F59E0B] group-hover:scale-110 flex items-center justify-center transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-[#F59E0B] group-hover:scale-110 flex items-center justify-center transition-transform pointer-events-none">
                   <CheckCircle className="w-5 h-5" />
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#F59E0B] transition-colors">Tracked to Resolution</h3>

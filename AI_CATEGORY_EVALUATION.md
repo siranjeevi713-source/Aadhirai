@@ -48,3 +48,4 @@ $$\text{Accuracy} = \frac{\text{True Positives} + \text{True Negatives}}{\text{T
 $$\text{False Positive Rate (FPR on Negatives)} = \frac{\text{False Positives}}{\text{Actual Negatives}} = \frac{0}{6} = 0.0\%$$
 
 $$\text{Average Inference Latency} = 13.5 \text{ ms per image (Local CPU Heuristic)}$$
+

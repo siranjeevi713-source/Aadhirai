@@ -42,20 +42,29 @@ async function request<T>(
   if (!response.ok) {
     let errorDetail = "An unexpected error occurred";
     try {
-      const rawText = await response.text();
+      const cloned = response.clone();
+      const rawText = await cloned.text();
       try {
         const errJson = JSON.parse(rawText);
         errorDetail = errJson.detail || errJson.message || JSON.stringify(errJson);
       } catch {
-        errorDetail = rawText || response.statusText;
+        errorDetail = rawText || response.statusText || "Request failed";
       }
     } catch {
-      errorDetail = response.statusText;
+      errorDetail = response.statusText || "Request failed";
     }
     throw new ApiError(errorDetail, response.status);
   }
 
-  return response.json() as Promise<T>;
+  if (response.status === 204) {
+    return {} as T;
+  }
+
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return {} as T;
+  }
 }
 
 export const api = {

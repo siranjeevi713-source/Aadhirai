@@ -58,3 +58,4 @@ The AADHIRAI routing engine operates deterministically through 4 cascading tiers
 - **Citizen Category Override**: Citizens can manually correct AI suggestions before final confirmation. When corrected, the routing engine recalculates the assigned department immediately prior to database commit.
 - **Audit Logging**: Every routing decision records `routing_method` (`AI_AUTOMATIC` vs `CITIZEN_OVERRIDE`), `assigned_department_id`, and `assigned_officer_id` in `complaint_history` and `audit_logs`.
 - **Status Integrity**: New complaints enter in `SUBMITTED` or `ASSIGNED` state. Complaints are strictly forbidden from entering `RESOLVED` or `VERIFIED_RESOLVED` without signed officer closure and independent supervisor audit.
+

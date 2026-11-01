@@ -43,3 +43,4 @@
 1. **Pothole vs Clean Street**: Clean asphalt possesses low variance ($\sigma_{block} < 16.0$) and uniform luminance. Potholes exhibit dark crater regions with high block variance. The threshold $\sigma_{block} > 18.0$ reliably isolates true defects.
 2. **Garbage vs Household Interiors**: High-frequency edge energy combined with color saturation variance is constrained to asphalt/soil backgrounds ($RGB_{\sigma} < 26.0$), rejecting indoor clutter and colorful items.
 3. **Landscape Horizon vs Road Cracks**: By zoning the image into sky ($y < 0.35$) and road ($y > 0.40$), tree lines and mountain silhouettes are excluded from defect calculations.
+

@@ -31,3 +31,4 @@ The database schema enforces relational integrity across 12 core tables:
 - **Foreign Key Enforcement**: Enabled via SQLite `PRAGMA foreign_keys = ON;` in development and enforced by native PostgreSQL constraints in production.
 - **ACID Transaction Boundaries**: All complaint submission operations wrap image record creation, AI diagnostic logging, routing calculation, and event creation inside a single `db.begin()` transaction block. If image persistence or analysis fails, the transaction rolls back cleanly.
 - **No Mock Persistence**: Real database rows are written to disk; `SELECT` queries verify data retention across server restarts.
+

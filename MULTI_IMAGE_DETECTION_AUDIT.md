@@ -53,3 +53,4 @@ An end-to-end investigation and audit of the AADHIRAI Computer Vision & AI class
 - **Empirical Accuracy on Diverse Dataset**: **100.0%**
 - **False Positive Rate on Unrelated Images**: **0.0%** (0 out of 6 non-civic/clean images generated false complaints)
 - **Unit & Integration Test Suite**: **59/59 passing**
+
