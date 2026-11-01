@@ -133,6 +133,58 @@ async function seedDatabase() {
     console.log('[Seed] Super Admin created:', superAdminEmail);
   }
 
+  // 6. Default Citizen
+  const citizenEmail = 'citizen@aadhirai.gov.in';
+  let defaultCitizen = await User.findOne({ email: citizenEmail });
+  if (!defaultCitizen) {
+    const hash = await bcrypt.hash('Aadhirai@2026', 12);
+    defaultCitizen = await User.create({
+      name: 'Default Citizen',
+      email: citizenEmail,
+      mobile: '9000000002',
+      passwordHash: hash,
+      role: 'citizen',
+      homeDistrictId: coimbatore._id,
+      isActive: true,
+    });
+    console.log('[Seed] Default Citizen created:', citizenEmail);
+  }
+
+  // 7. Default Department Admin (Coimbatore Roads & Infrastructure)
+  const deptAdminEmail = 'deptadmin@aadhirai.gov.in';
+  let defaultDeptAdmin = await User.findOne({ email: deptAdminEmail });
+  if (!defaultDeptAdmin) {
+    const hash = await bcrypt.hash('Aadhirai@2026', 12);
+    defaultDeptAdmin = await User.create({
+      name: 'Coimbatore Roads Admin',
+      email: deptAdminEmail,
+      mobile: '9000000003',
+      passwordHash: hash,
+      role: 'department_admin',
+      assignedDistrictId: coimbatore._id,
+      departmentId: deptMap[cbRoadsCode]?._id,
+      isActive: true,
+    });
+    console.log('[Seed] Default Department Admin created:', deptAdminEmail);
+  }
+
+  // 8. Default District Reviewer (Coimbatore)
+  const reviewerEmail = 'reviewer@aadhirai.gov.in';
+  let defaultReviewer = await User.findOne({ email: reviewerEmail });
+  if (!defaultReviewer) {
+    const hash = await bcrypt.hash('Aadhirai@2026', 12);
+    defaultReviewer = await User.create({
+      name: 'Coimbatore District Reviewer',
+      email: reviewerEmail,
+      mobile: '9000000004',
+      passwordHash: hash,
+      role: 'reviewer',
+      assignedDistrictId: coimbatore._id,
+      isActive: true,
+    });
+    console.log('[Seed] Default District Reviewer created:', reviewerEmail);
+  }
+
   console.log('[Seed] Database seeding complete.');
   return { districtMap, deptMap };
 }
