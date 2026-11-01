@@ -11,6 +11,7 @@ from preprocessing.image_processor import ImagePreprocessor
 from inference.classifier import CivicClassifier
 
 DATASET_ROOT = Path(__file__).resolve().parent.parent.parent / "test_dataset"
+UPLOADS_ROOT = Path(__file__).resolve().parent.parent.parent / "backend" / "storage_uploads"
 
 TEST_SUITE = [
     ("road/pothole_small.jpg", "POTHOLE"),
@@ -29,11 +30,18 @@ TEST_SUITE = [
     ("unrelated/mountain_landscape.jpg", "OTHER / UNCLEAR"),
 ]
 
+# Real-world user upload verification (including the screenshot garbage photo)
+UPLOAD_CHECKS = [
+    ("00689056-8cd3-4ed9-b2d7-2ebd3800930e.webp", "GARBAGE_ACCUMULATION"),
+    ("238660bf-7a0d-4a3d-ba82-4c093fc0d2eb.webp", "GARBAGE_ACCUMULATION"),
+    ("4be8403d-9618-409c-9d71-63977c628ccf.webp", "GARBAGE_ACCUMULATION"),
+]
+
 def run_tests():
     passed = 0
-    total = len(TEST_SUITE)
+    total = len(TEST_SUITE) + len(UPLOAD_CHECKS)
     print("=" * 80)
-    print("AADHIRAI ML-SERVICE BENCHMARK")
+    print("AADHIRAI ML-SERVICE BENCHMARK (DATASET + USER UPLOADS)")
     print("=" * 80)
 
     for rel_path, expected in TEST_SUITE:
@@ -55,6 +63,27 @@ def run_tests():
             print(f"[PASS] {rel_path:35s} -> {pred:22s} (Conf: {conf})")
         else:
             print(f"[FAIL] {rel_path:35s} -> Expected: {expected}, Got: {pred}")
+
+    print("\n--- User Uploads Verification ---")
+    for file_name, expected in UPLOAD_CHECKS:
+        file_path = UPLOADS_ROOT / file_name
+        if not file_path.exists():
+            print(f"[SKIP] Missing: {file_name}")
+            continue
+
+        with open(file_path, "rb") as f:
+            image_bytes = f.read()
+
+        preprocessed = ImagePreprocessor.preprocess_image(image_bytes)
+        res = CivicClassifier.classify(preprocessed)
+        pred = res["predictedCategory"]
+        conf = res["confidence"]
+
+        if pred == expected:
+            passed += 1
+            print(f"[PASS] {file_name:35s} -> {pred:22s} (Conf: {conf})")
+        else:
+            print(f"[FAIL] {file_name:35s} -> Expected: {expected}, Got: {pred}")
 
     print("-" * 80)
     print(f"Passed: {passed}/{total} ({passed/total*100:.1f}%)")

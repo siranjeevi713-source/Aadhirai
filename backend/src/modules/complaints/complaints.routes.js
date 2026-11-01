@@ -13,7 +13,7 @@ const router = express.Router();
 router.get('/public/:ticketNumber', publicTrack);
 
 // Citizen
-router.post('/analyze-image', authenticate, requireRole('citizen'), upload.single('image'), handleMulterError, analyzeImage);
+router.post('/analyze-image', authenticate, requireRole('citizen'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'file', maxCount: 1 }]), handleMulterError, analyzeImage);
 router.post('/', authenticate, requireRole('citizen'), submitComplaint);
 router.get('/my', authenticate, requireRole('citizen'), getMyComplaints);
 

@@ -42,15 +42,16 @@ export default function SubmitComplaintPage() {
       })
 
       const data = res.data
-      setAiResult(data)
-      const detected = data.predictedCategory || data.predicted_category || 'ROAD_DAMAGE'
+      const aiData = data.ai || data
+      setAiResult(aiData)
+      const detected = aiData.predictedCategory || aiData.predicted_category || 'ROAD_DAMAGE'
       setCitizenCategory(detected)
       setTitle(`${detected.replace(/_/g, ' ')} reported via AI`)
-      setDescription(`AI Computer Vision detected ${detected} with confidence ${(data.confidence || data.confidence_score || 0.9).toFixed(2)}.`)
+      setDescription(aiData.explanation || aiData.issue_description || `AI Computer Vision detected ${detected} with confidence ${((aiData.confidence || aiData.confidence_score || 0.9) * 100).toFixed(1)}%.`)
     } catch (err) {
       console.warn('AI analysis error, proceeding with manual categorization:', err)
-      setCitizenCategory('ROAD_DAMAGE')
-      setTitle('Civic problem reported on road')
+      setCitizenCategory('GARBAGE_ACCUMULATION')
+      setTitle('Civic problem reported by citizen')
     } finally {
       setAnalyzing(false)
     }
@@ -169,15 +170,21 @@ export default function SubmitComplaintPage() {
             <div style={{ marginTop: '12px', display: 'flex', gap: '16px', alignItems: 'center' }}>
               <img src={previewUrl} alt="Preview" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #CBD5E1' }} />
               {aiResult && (
-                <div style={{ padding: '12px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', flex: 1, fontSize: '12px' }}>
-                  <div style={{ fontWeight: 800, color: '#166534', marginBottom: '4px' }}>
-                    AI Detection: {aiResult.predictedCategory || aiResult.predicted_category}
+                <div style={{ padding: '14px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', flex: 1, fontSize: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <div style={{ fontWeight: 800, color: '#166534', fontSize: '14px' }}>
+                      AI Detection: {aiResult.predictedCategory || aiResult.predicted_category}
+                    </div>
+                    <span style={{ background: '#DCFCE7', color: '#15803D', padding: '2px 8px', borderRadius: '999px', fontWeight: 700, fontSize: '11px' }}>
+                      {((aiResult.confidence || aiResult.confidence_score || 0.9) * 100).toFixed(1)}% Confidence
+                    </span>
                   </div>
-                  <div style={{ color: '#15803D' }}>
-                    Confidence: {((aiResult.confidence || aiResult.confidence_score || 0.9) * 100).toFixed(1)}%
+                  <div style={{ color: '#334155', marginBottom: '4px', lineHeight: 1.4 }}>
+                    <strong>Explanation:</strong> {aiResult.explanation || aiResult.issue_description || 'Visual evidence identified.'}
                   </div>
-                  <div style={{ color: '#475569', marginTop: '4px' }}>
-                    Suggested Dept: {aiResult.suggestedDepartment || 'Highways & Infrastructure'}
+                  <div style={{ display: 'flex', gap: '12px', color: '#64748B', marginTop: '6px', fontSize: '11px' }}>
+                    <div><strong>Quality:</strong> {aiResult.quality || aiResult.image_quality || 'EXCELLENT'}</div>
+                    <div><strong>Severity:</strong> {aiResult.suggestedSeverity || aiResult.suggested_severity || 'HIGH'}</div>
                   </div>
                 </div>
               )}
@@ -188,7 +195,7 @@ export default function SubmitComplaintPage() {
         {/* Step 2: Confirm Category */}
         <div>
           <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
-            Step 2: Confirm Category *
+            Step 2: Confirm Category * (AI suggested above, you can modify if needed)
           </label>
           <select
             value={citizenCategory}
@@ -196,15 +203,17 @@ export default function SubmitComplaintPage() {
             className="input-field"
             required
           >
-            <option value="ROAD_DAMAGE">Road Damage (Pothole / Broken Asphalt)</option>
-            <option value="GARBAGE_ACCUMULATION">Garbage Accumulation & Waste</option>
-            <option value="DRAINAGE_OVERFLOW">Drainage Overflow / Blocked Canal</option>
-            <option value="WATER_LEAKAGE">Water Supply Pipe Leakage</option>
-            <option value="BROKEN_STREETLIGHT">Broken Streetlight / Electrical Pole</option>
-            <option value="FALLEN_TREE">Fallen Tree / Infrastructure Damage</option>
-            <option value="PUBLIC_PROPERTY_DAMAGE">Public Property Damage</option>
-            <option value="SEWAGE_OVERFLOW">Sewage Overflow</option>
-            <option value="OTHER_UNCLEAR">Other / Unclear</option>
+            <option value="GARBAGE_ACCUMULATION">Garbage Accumulation & Waste (Sanitation Dept)</option>
+            <option value="POTHOLE">Pothole (Roads Dept)</option>
+            <option value="ROAD_DAMAGE">Road Damage / Asphalt Fissures (Roads Dept)</option>
+            <option value="DRAINAGE_BLOCKAGE">Drainage Blockage / Culvert Obstruction (Sanitation Dept)</option>
+            <option value="SEWAGE_OVERFLOW">Sewage Overflow / Foul Blackwater (Sanitation Dept)</option>
+            <option value="WATER_LEAKAGE">Water Supply Pipe Leakage (Water Dept)</option>
+            <option value="WATERLOGGING">Street Waterlogging / Rainwater Pooling (Water Dept)</option>
+            <option value="BROKEN_STREETLIGHT">Broken Streetlight / Electrical Pole (Electrical Dept)</option>
+            <option value="DAMAGED_PUBLIC_INFRASTRUCTURE">Damaged Public Infrastructure (Civic Dept)</option>
+            <option value="FALLEN_TREE">Fallen Tree / Road Obstruction (Highways Dept)</option>
+            <option value="OTHER / UNCLEAR">Other / Unclear Civic Defect</option>
           </select>
         </div>
 

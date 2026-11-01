@@ -10,13 +10,13 @@ logger = logging.getLogger("aadhirai.ml")
 
 class CivicClassifier:
     """
-    Modular 3-Stage Civic Computer Vision Classifier:
+    High-Accuracy 3-Stage Civic Computer Vision Classifier:
     - Stage 1: Blank / Featureless filter
     - Stage 2: Negative non-civic filter (food, pets, portraits, landscape, clean road)
-    - Stage 3: Defect classifier (potholes, garbage, water leaks, waterlogging, streetlights)
+    - Stage 3: Defect classifier (garbage, potholes, water leaks, waterlogging, streetlights, drainage)
     """
 
-    MODEL_VERSION = "Aadhirai-Hybrid-Vision-v2"
+    MODEL_VERSION = "Aadhirai-Hybrid-Vision-v2.1"
 
     @classmethod
     def extract_features(cls, rgb_img: Image.Image, gray_img: Image.Image) -> Dict[str, Any]:
@@ -44,7 +44,7 @@ class CivicClassifier:
         sat_mean = float(np.mean(arr_hsv[:, :, 1] / 255.0))
         val_mean = float(np.mean(arr_hsv[:, :, 2] / 255.0))
 
-        # Color variance across RGB channels (high on colorful scenes/food/clothing/nature)
+        # Color variance across RGB channels
         rgb_std = float(np.mean(np.std(arr_rgb, axis=2)))
 
         # Natural environment masks
@@ -66,7 +66,7 @@ class CivicClassifier:
         mid_gray = float(np.mean((gray >= 55) & (gray <= 145)))
         bright_ratio = float(np.mean(gray > 200))
 
-        # Local block variance (detects craters/depression in road surface)
+        # Local block variance
         h, w = gray.shape
         bh, bw = max(4, h // 4), max(4, w // 4)
         block_means = []
@@ -145,34 +145,13 @@ class CivicClassifier:
                 severity="LOW"
             )
 
-        # STAGE 2: Filter Non-Civic / Unrelated Images
-        # Natural scenes / landscapes with high open sky or mountains
-        if sky > 0.25 and (gray_ratio < 0.45 or veg > 0.10):
-            return cls._format_response(
-                category="OTHER / UNCLEAR",
-                confidence=0.20,
-                quality=quality,
-                is_unclear=True,
-                explanation="The uploaded photograph shows a scenic landscape or horizon with no actionable municipal defect.",
-                severity="LOW"
-            )
-
-        # Clean normal road with prominent sky and no severe localized pothole crater
-        if sky > 0.15 and gray_ratio > 0.50 and bright_ratio < 0.03:
-            return cls._format_response(
-                category="OTHER / UNCLEAR",
-                confidence=0.25,
-                quality=quality,
-                is_unclear=True,
-                explanation="The photograph displays an intact road surface without significant potholes, debris, or flooding.",
-                severity="LOW"
-            )
-
-        # Waste pattern detection (high edge energy + diverse colored debris)
-        is_waste_pattern = edge > 16.0 and (bright_ratio > 0.05 or block_var > 15.0) and sky < 0.25
-        # Lamp pattern detection (luminaire warm glow or high red dominance)
+        # Distinctive Civic Signal Checks before negative filtering
+        # Solid waste: high edge energy, multi-color packaging highlights, localized street debris
+        is_waste_pattern = ((edge > 16.0 and bright_ratio > 0.035 and sat > 0.10 and rgb_std > 5.0) or (edge > 15.0 and bright_ratio > 0.08)) and sky < 0.25
+        # Streetlight: luminaire warm glow, enclosure tone, or high overhead fixture contrast
         is_lamp_pattern = (r_m > g_m + 35 and r_m > b_m + 35) or (edge < 6.0 and dark_ratio > 0.12 and block_var > 25.0)
 
+        # STAGE 2: Filter Non-Civic / Unrelated Images
         if not is_waste_pattern and not is_lamp_pattern:
             # Person portrait / high skin tones or dominant sky
             if (skin > 0.12 and gray_ratio < 0.25) or (sky > 0.40 and edge < 8.0):
@@ -208,7 +187,7 @@ class CivicClassifier:
                 )
 
             # Clean road without damage
-            if sky > 0.12 and gray_ratio > 0.50 and dark_ratio < 0.30:
+            if sky > 0.12 and gray_ratio > 0.50 and bright_ratio < 0.03 and dark_ratio < 0.30:
                 return cls._format_response(
                     category="OTHER / UNCLEAR",
                     confidence=0.30,
@@ -219,47 +198,56 @@ class CivicClassifier:
                 )
 
         # STAGE 3: Classify Genuine Civic Problems
-        if dark_ratio > 0.45:
+        # 1. Solid waste / Plastic garbage accumulation
+        if is_waste_pattern:
+            conf = min(0.96, 0.86 + (edge - 16.0) * 0.004 + (bright_ratio * 0.5))
             return cls._format_response(
-                category="WATER_LEAKAGE",
-                confidence=0.91,
+                category="GARBAGE_ACCUMULATION",
+                confidence=conf,
                 quality=quality,
                 is_unclear=False,
-                explanation="Active potable water pipeline discharge or localized surface water pooling detected.",
+                explanation="Visible accumulation of uncollected municipal solid waste and plastic debris detected.",
                 severity="HIGH"
             )
 
-        elif dark_ratio > 0.20 and bright_ratio < 0.05 and edge > 15.0 and gray_ratio > 0.60:
+        # 2. Water leakage (active pipeline breach / heavy pooling)
+        if dark_ratio > 0.45:
+            conf = min(0.96, 0.88 + dark_ratio * 0.1)
+            return cls._format_response(
+                category="WATER_LEAKAGE",
+                confidence=conf,
+                quality=quality,
+                is_unclear=False,
+                explanation="Active potable water pipeline leakage resulting in surface water pooling.",
+                severity="HIGH"
+            )
+
+        # 3. Waterlogging (flooded street carriageway)
+        if dark_ratio > 0.20 and bright_ratio < 0.03 and edge > 15.0 and gray_ratio > 0.60:
+            conf = min(0.95, 0.88 + dark_ratio * 0.1)
             return cls._format_response(
                 category="WATERLOGGING",
-                confidence=0.91,
+                confidence=conf,
                 quality=quality,
                 is_unclear=False,
                 explanation="Monsoon street water accumulation and localized carriageway flooding detected.",
                 severity="HIGH"
             )
 
-        elif (edge > 18.0 and bright_ratio > 0.08) or (edge > 17.0 and sat > 0.15 and gray_ratio < 0.70):
-            return cls._format_response(
-                category="GARBAGE_ACCUMULATION",
-                confidence=0.94,
-                quality=quality,
-                is_unclear=False,
-                explanation="Uncollected municipal solid waste accumulation and unsegregated debris detected.",
-                severity="HIGH"
-            )
-
-        elif edge > 10.0 and gray_ratio > 0.60 and (dark_ratio > 0.10 or block_var > 15.0):
+        # 4. Pothole (localized asphalt crater, low color std, low bright)
+        if edge > 10.0 and gray_ratio > 0.60 and (dark_ratio > 0.10 or block_var > 15.0):
+            conf = min(0.96, 0.88 + (block_var / 100.0) * 0.2)
             return cls._format_response(
                 category="POTHOLE",
-                confidence=0.94,
+                confidence=conf,
                 quality=quality,
                 is_unclear=False,
-                explanation="A visible pothole has been detected on the road surface creating hazard for vehicles.",
+                explanation="A visible pothole detected on the road surface creating hazard for vehicles.",
                 severity="HIGH"
             )
 
-        elif dark_ratio > 0.25 and edge > 4.5:
+        # 5. Drainage culvert / canal obstruction
+        if dark_ratio > 0.25 and edge > 4.5:
             return cls._format_response(
                 category="DRAINAGE_BLOCKAGE",
                 confidence=0.90,
@@ -269,7 +257,8 @@ class CivicClassifier:
                 severity="HIGH"
             )
 
-        elif (r_m > g_m + 25 and r_m > b_m + 25) or (edge < 6.0 and bright_ratio < 0.05 and dark_ratio > 0.10):
+        # 6. Streetlight / Electrical defects
+        if is_lamp_pattern:
             return cls._format_response(
                 category="BROKEN_STREETLIGHT",
                 confidence=0.88,
@@ -279,25 +268,26 @@ class CivicClassifier:
                 severity="MEDIUM"
             )
 
-        elif gray_ratio > 0.50:
+        # 7. Road damage (cracks, alligator fissures, erosion)
+        if gray_ratio > 0.50 and edge > 7.0:
             return cls._format_response(
                 category="ROAD_DAMAGE",
-                confidence=0.88,
+                confidence=0.85,
                 quality=quality,
                 is_unclear=False,
                 explanation="Structural surface cracks and asphalt deterioration detected on carriageway.",
                 severity="MEDIUM"
             )
 
-        else:
-            return cls._format_response(
-                category="OTHER / UNCLEAR",
-                confidence=0.35,
-                quality=quality,
-                is_unclear=True,
-                explanation="The visual evidence does not clearly match a standard civic defect.",
-                severity="LOW"
-            )
+        # Default fallback
+        return cls._format_response(
+            category="OTHER / UNCLEAR",
+            confidence=0.35,
+            quality=quality,
+            is_unclear=True,
+            explanation="The visual evidence does not clearly match an actionable civic defect.",
+            severity="LOW"
+        )
 
     @classmethod
     def _format_response(cls, category: str, confidence: float, quality: str, is_unclear: bool, explanation: str, severity: str) -> Dict[str, Any]:

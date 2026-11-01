@@ -180,29 +180,54 @@ export default function SubmitComplaintPage() {
 
     api.post<any>("/ai/classify-image", formData)
       .then((res) => {
+        const catCode = (res.predicted_category || res.suggested_category || "").toUpperCase();
+        let matchedCat = categories.find(c => 
+          c.id === res.category_id || 
+          c.code?.toUpperCase() === catCode || 
+          (c.name_en && catCode.length > 2 && c.name_en.toUpperCase().includes(catCode.replace(/_/g, ' ')))
+        );
+
+        if (!matchedCat) {
+          if (catCode.includes("GARBAGE") || catCode.includes("SOLID_WASTE") || catCode.includes("SANITATION")) {
+            matchedCat = categories.find(c => c.id === "cat_garbage" || c.code === "cat_garbage");
+          } else if (catCode.includes("WATERLOG") || catCode.includes("FLOOD")) {
+            matchedCat = categories.find(c => c.id === "cat_drainage" || c.id === "cat_water_leak");
+          } else if (catCode.includes("WATER_LEAK") || catCode.includes("PIPE")) {
+            matchedCat = categories.find(c => c.id === "cat_water_leak");
+          } else if (catCode.includes("DRAIN") || catCode.includes("SEWAGE")) {
+            matchedCat = categories.find(c => c.id === "cat_drainage");
+          } else if (catCode.includes("LIGHT") || catCode.includes("ELEC")) {
+            matchedCat = categories.find(c => c.id === "cat_streetlight");
+          } else if (catCode.includes("POTHOLE") || catCode.includes("ROAD")) {
+            matchedCat = categories.find(c => c.id === "cat_road_damage");
+          }
+        }
+
+        const chosenCatId = matchedCat?.id || res.category_id || (catCode.includes("GARBAGE") ? "cat_garbage" : "cat_road_damage");
+        const categoryName = matchedCat?.name_en || res.category_name || (catCode.includes("GARBAGE") ? "Garbage Accumulation" : "Road Damage (Pothole)");
+        const deptName = res.suggested_department || (catCode.includes("GARBAGE") ? "Sanitation & Solid Waste Management" : "Municipal Roads Department");
+
         const resultData: AiResult = {
-          suggested_category: res.suggested_category || "cat_road_damage",
-          category_name: res.category_name || "Road Damage (Pothole)",
-          confidence: res.confidence || 0.94,
-          severity: res.severity || "HIGH",
-          reason: res.reason || "A visible pothole has been detected on the road surface. This may cause vehicle damage and is a safety hazard.",
-          suggested_department: res.suggested_department || "Municipal Roads Department",
+          suggested_category: chosenCatId,
+          category_name: categoryName,
+          confidence: res.confidence !== undefined ? res.confidence : (res.confidence_score || 0.94),
+          severity: res.severity || res.suggested_severity || "HIGH",
+          reason: res.reason || res.issue_description || "Visual evidence analyzed and verified by AI engine.",
+          suggested_department: deptName,
         };
         setAiResult(resultData);
-        if (res.category_id) {
-          setSelectedCategoryId(res.category_id);
-        }
+        setSelectedCategoryId(chosenCatId);
         setTimeout(() => setStep("ai_result"), 800);
       })
-      .catch(() => {
-        // Fallback realistic AI response matching Reference 2
+      .catch((err) => {
+        console.error("AI classification error:", err);
         setAiResult({
           suggested_category: "cat_road_damage",
-          category_name: "Road Damage (Pothole)",
-          confidence: 0.94,
-          severity: "HIGH",
-          reason: "A visible pothole has been detected on the road surface. This may cause vehicle damage and is a safety hazard.",
-          suggested_department: "Municipal Roads Department",
+          category_name: "Manual Review Required",
+          confidence: 0.50,
+          severity: "MEDIUM",
+          reason: "Image analysis inconclusive. Please verify or pick the correct category below.",
+          suggested_department: "Municipal Administration",
         });
         setTimeout(() => setStep("ai_result"), 800);
       });

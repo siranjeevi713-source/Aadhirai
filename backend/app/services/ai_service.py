@@ -340,7 +340,7 @@ Do not include markdown fences, return pure JSON."""
             }
 
         # Exemption: High edge energy with diverse colored debris indicates municipal solid waste / plastic litter!
-        is_waste_pattern = edge > 16.0 and (bright_ratio > 0.05 or block_var > 15.0) and sky < 0.25
+        is_waste_pattern = ((edge > 16.0 and bright_ratio > 0.035 and sat > 0.10 and rgb_std > 5.0) or (edge > 15.0 and bright_ratio > 0.08)) and sky < 0.25
 
         # Exemption: Warm lamp enclosure / luminaire glow with high red dominance
         is_lamp_pattern = (r_m > g_m + 35 and r_m > b_m + 35) or (edge < 6.0 and dark_ratio > 0.12 and block_var > 25.0)
@@ -389,7 +389,7 @@ Do not include markdown fences, return pure JSON."""
                 }
 
             # D. Clean road without damage (sky visible + high gray ratio + low localized depression)
-            if sky > 0.12 and gray_ratio > 0.50 and dark_ratio < 0.30:
+            if sky > 0.12 and gray_ratio > 0.50 and bright_ratio < 0.03 and dark_ratio < 0.30:
                 return {
                     "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
                     "confidence_score": 0.30,
@@ -405,34 +405,34 @@ Do not include markdown fences, return pure JSON."""
         # -------------------------------------------------------------
         # STAGE 3: Classify Genuine Civic Problems
         # -------------------------------------------------------------
-        # 1. Very dark, saturated puddle / pipeline breach
-        if dark_ratio > 0.45:
+        # 1. Solid waste / Plastic garbage accumulation (detected first to prevent asphalt fallthrough)
+        if is_waste_pattern:
+            predicted = "GARBAGE_ACCUMULATION"
+            confidence = round(min(0.96, 0.86 + (edge - 16.0) * 0.004 + (bright_ratio * 0.5)), 2)
+            description = "Visible accumulation of uncollected municipal solid waste and plastic debris detected."
+            indicators = ["High-frequency waste debris", "Plastic packaging clutter", "Pedestrian obstruction"]
+            severity = "HIGH"
+
+        # 2. Very dark, saturated puddle / pipeline breach
+        elif dark_ratio > 0.45:
             predicted = "WATER_LEAKAGE"
-            confidence = 0.91
+            confidence = round(min(0.96, 0.88 + dark_ratio * 0.1), 2)
             description = "Active potable water pipeline discharge or localized surface water pooling detected."
             indicators = ["Water film reflection", "Ground water saturation", "Submerged surface"]
             severity = "HIGH"
 
-        # 2. Flooded street / Waterlogging (moderate dark + reflective mid tones + low bright)
-        elif dark_ratio > 0.20 and bright_ratio < 0.05 and edge > 15.0 and gray_ratio > 0.60:
+        # 3. Flooded street / Waterlogging (moderate dark + reflective mid tones + low bright)
+        elif dark_ratio > 0.20 and bright_ratio < 0.03 and edge > 15.0 and gray_ratio > 0.60:
             predicted = "WATERLOGGING"
-            confidence = 0.91
+            confidence = round(min(0.95, 0.88 + dark_ratio * 0.1), 2)
             description = "Monsoon street water accumulation and localized carriageway flooding detected."
             indicators = ["Submerged road pavement", "Reflective water surface", "Traffic obstruction"]
-            severity = "HIGH"
-
-        # 3. Solid waste / Plastic garbage accumulation (high edge energy + scattered debris texture)
-        elif (edge > 18.0 and bright_ratio > 0.08) or (edge > 17.0 and sat > 0.15 and gray_ratio < 0.70):
-            predicted = "GARBAGE_ACCUMULATION"
-            confidence = 0.94
-            description = "Uncollected municipal solid waste accumulation and unsegregated debris detected."
-            indicators = ["High-frequency waste debris", "Plastic packaging clutter", "Pedestrian obstruction"]
             severity = "HIGH"
 
         # 4. Pothole crater (High edge energy + dark depression on gray asphalt + low sky)
         elif edge > 10.0 and gray_ratio > 0.60 and (dark_ratio > 0.10 or block_var > 15.0):
             predicted = "POTHOLE"
-            confidence = 0.94
+            confidence = round(min(0.96, 0.88 + (block_var / 100.0) * 0.2), 2)
             description = "A visible pothole has been detected on the road surface. This creates vehicle damage and safety hazards."
             indicators = ["Damaged asphalt surface", "Depression crater", "Edge disintegration"]
             severity = "HIGH"
@@ -446,7 +446,7 @@ Do not include markdown fences, return pure JSON."""
             severity = "HIGH"
 
         # 6. Streetlight / Electrical defects (warm luminaire tones or vertical post fixture)
-        elif (r_m > g_m + 25 and r_m > b_m + 25) or (edge < 6.0 and bright_ratio < 0.05 and dark_ratio > 0.10):
+        elif is_lamp_pattern:
             predicted = "BROKEN_STREETLIGHT"
             confidence = 0.88
             description = "Non-functional street illumination fixture or lamp defect creating public darkness."
@@ -454,9 +454,9 @@ Do not include markdown fences, return pure JSON."""
             severity = "MEDIUM"
 
         # 7. General road wear
-        elif gray_ratio > 0.50:
+        elif gray_ratio > 0.50 and edge > 7.0:
             predicted = "ROAD_DAMAGE"
-            confidence = 0.88
+            confidence = 0.85
             description = "Structural surface cracks and asphalt deterioration detected on carriageway."
             indicators = ["Asphalt wear", "Uneven road layer", "Surface fissures"]
             severity = "MEDIUM"

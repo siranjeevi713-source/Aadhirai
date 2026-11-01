@@ -21,12 +21,13 @@ async function generateTicketNumber(districtId) {
 // POST /api/complaints/analyze-image
 async function analyzeImage(req, res) {
   try {
-    if (!req.file) return res.status(400).json({ success: false, message: 'Image file required.' });
+    const fileObj = req.file || req.files?.image?.[0] || req.files?.file?.[0];
+    if (!fileObj) return res.status(400).json({ success: false, message: 'Image file required.' });
 
     const form = new FormData();
-    form.append('file', fs.createReadStream(req.file.path), {
-      filename: req.file.originalname || 'image.jpg',
-      contentType: req.file.mimetype,
+    form.append('file', fs.createReadStream(fileObj.path), {
+      filename: fileObj.originalname || 'image.jpg',
+      contentType: fileObj.mimetype,
     });
 
     let mlResult;
@@ -47,8 +48,19 @@ async function analyzeImage(req, res) {
 
     return res.json({
       success: true,
-      fileUrl: `/uploads/${path.basename(req.file.path)}`,
-      fileName: path.basename(req.file.path),
+      fileUrl: `/uploads/${path.basename(fileObj.path)}`,
+      fileName: path.basename(fileObj.path),
+      predictedCategory: mlResult.predictedCategory || mlResult.predicted_category,
+      predicted_category: mlResult.predictedCategory || mlResult.predicted_category,
+      confidence: mlResult.confidence !== undefined ? mlResult.confidence : mlResult.confidence_score,
+      confidence_score: mlResult.confidence_score !== undefined ? mlResult.confidence_score : mlResult.confidence,
+      quality: mlResult.quality || mlResult.image_quality,
+      image_quality: mlResult.image_quality || mlResult.quality,
+      explanation: mlResult.explanation || mlResult.issue_description,
+      issue_description: mlResult.issue_description || mlResult.explanation,
+      suggestedSeverity: mlResult.suggestedSeverity || mlResult.suggested_severity,
+      suggested_severity: mlResult.suggested_severity || mlResult.suggestedSeverity,
+      isUnclear: mlResult.isUnclear !== undefined ? mlResult.isUnclear : mlResult.is_unclear,
       ai: mlResult,
     });
   } catch (err) {
