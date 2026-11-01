@@ -314,11 +314,12 @@ Do not include markdown fences, return pure JSON."""
         # Natural scenes / landscapes with high open sky or mountains
         if sky > 0.25 and (gray_ratio < 0.45 or veg_ratio > 0.10):
             return {
-                "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
-                "confidence_score": 0.20,
-                "issue_description": "The uploaded photograph shows a scenic landscape or horizon with no actionable municipal defect.",
+                "predicted_category": "NON_CIVIC_IMAGE",
+                "is_civic_issue": False,
+                "confidence_score": 0.15,
+                "issue_description": "The uploaded photograph shows a scenic landscape or horizon with no actionable municipal defect. Non-civic images cannot be submitted as municipal complaints.",
                 "visual_indicators": ["Open sky / landscape horizon detected", "No localized municipal defect"],
-                "suggested_severity": "LOW",
+                "suggested_severity": "NONE",
                 "image_quality": quality,
                 "uncertainty_reason": "No municipal defect identified in image",
                 "requires_human_confirmation": True,
@@ -326,13 +327,14 @@ Do not include markdown fences, return pure JSON."""
             }
 
         # Clean normal road with prominent sky and no severe localized pothole crater
-        if sky > 0.15 and gray_ratio > 0.50 and bright_ratio < 0.03:
+        if sky > 0.15 and gray_ratio > 0.50 and bright_ratio < 0.03 and edge < 9.0:
             return {
-                "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
-                "confidence_score": 0.25,
-                "issue_description": "The photograph displays an intact road surface without significant potholes, debris, or flooding.",
+                "predicted_category": "NON_CIVIC_IMAGE",
+                "is_civic_issue": False,
+                "confidence_score": 0.20,
+                "issue_description": "The photograph displays an intact road surface without significant potholes, debris, or flooding. No actionable civic defect detected.",
                 "visual_indicators": ["Normal asphalt carriageway", "No visible structural pothole crater"],
-                "suggested_severity": "LOW",
+                "suggested_severity": "NONE",
                 "image_quality": quality,
                 "uncertainty_reason": "Road surface appears clean and undamaged",
                 "requires_human_confirmation": True,
@@ -347,13 +349,14 @@ Do not include markdown fences, return pure JSON."""
 
         if not is_waste_pattern and not is_lamp_pattern:
             # A. Person portrait / high skin tones or dominant sky
-            if (skin > 0.12 and gray_ratio < 0.25) or (sky > 0.40 and edge < 8.0):
+            if (skin > 0.10 and gray_ratio < 0.30) or (skin > 0.18):
                 return {
-                    "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
-                    "confidence_score": 0.20,
-                    "issue_description": "The uploaded photograph appears to be a portrait or person photograph with no visible civic problem.",
+                    "predicted_category": "NON_CIVIC_IMAGE",
+                    "is_civic_issue": False,
+                    "confidence_score": 0.15,
+                    "issue_description": "The uploaded photograph appears to be a portrait or person photograph with no visible civic problem. Non-civic personal photos cannot be submitted as municipal complaints.",
                     "visual_indicators": ["Non-civic subject (person / portrait detected)", "Low asphalt / infrastructure content"],
-                    "suggested_severity": "LOW",
+                    "suggested_severity": "NONE",
                     "image_quality": quality,
                     "uncertainty_reason": "No municipal defect identified in image",
                     "requires_human_confirmation": True,
@@ -363,11 +366,12 @@ Do not include markdown fences, return pure JSON."""
             # B. Food, dishes, high-saturation non-infrastructure items
             if sat > 0.22 and rgb_std > 16.0 and gray_ratio < 0.15:
                 return {
-                    "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
-                    "confidence_score": 0.20,
-                    "issue_description": "The uploaded photograph contains non-civic subject matter (food, interior item, or domestic scene).",
+                    "predicted_category": "NON_CIVIC_IMAGE",
+                    "is_civic_issue": False,
+                    "confidence_score": 0.15,
+                    "issue_description": "The uploaded photograph contains non-civic domestic objects, food, or interior items with no municipal infrastructure. Non-civic images cannot be routed to municipal departments.",
                     "visual_indicators": ["High color saturation inconsistent with public infrastructure", "Absence of road or street elements"],
-                    "suggested_severity": "LOW",
+                    "suggested_severity": "NONE",
                     "image_quality": quality,
                     "uncertainty_reason": "No municipal defect identified in image",
                     "requires_human_confirmation": True,
@@ -377,11 +381,12 @@ Do not include markdown fences, return pure JSON."""
             # C. Landscapes / scenic views / animals with high sky or low infrastructure
             if (sky > 0.25 and gray_ratio < 0.30) or (rgb_std > 20.0 and gray_ratio < 0.20):
                 return {
-                    "predicted_category": "UNCLEAR_OR_UNDETECTABLE",
-                    "confidence_score": 0.25,
-                    "issue_description": "The uploaded photograph shows a scenic landscape or general view with no actionable municipal defect.",
+                    "predicted_category": "NON_CIVIC_IMAGE",
+                    "is_civic_issue": False,
+                    "confidence_score": 0.15,
+                    "issue_description": "The uploaded photograph shows a scenic landscape or general view with no actionable municipal defect. Please upload a photo of a civic problem (pothole, garbage, water leak, etc.).",
                     "visual_indicators": ["Landscape / natural horizon detected", "No localized infrastructure damage"],
-                    "suggested_severity": "LOW",
+                    "suggested_severity": "NONE",
                     "image_quality": quality,
                     "uncertainty_reason": "No municipal defect identified in image",
                     "requires_human_confirmation": True,

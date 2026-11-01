@@ -1,80 +1,89 @@
+"""
+Admin endpoints for AADHIRAI FastAPI backend.
+Uses pymongo instead of SQLAlchemy.
+"""
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from pymongo.database import Database
+from bson import ObjectId
 from app.core.database import get_db
 from app.core.rbac import require_role
-from app.models.models import (
-    User, ComplaintCategory, Department, Ward, RoutingRule, SLAPolicy,
-    AuditLog, DuplicateLink, Complaint
-)
-from app.schemas.schemas import (
-    CategoryResponse, CategoryCreate, DepartmentResponse, WardResponse
-)
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 
-@router.get("/categories", response_model=List[CategoryResponse])
-def list_categories(db: Session = Depends(get_db)):
-    return db.query(ComplaintCategory).all()
 
-@router.post("/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
+def _oid(id_str: str):
+    try:
+        return ObjectId(id_str)
+    except Exception:
+        return id_str
+
+
+@router.get("/categories")
+def list_categories(db: Database = Depends(get_db)):
+    cats = list(db.categories.find({}, {"__v": 0}))
+    for c in cats:
+        c["id"] = str(c.pop("_id"))
+    return cats
+
+
+@router.post("/categories", status_code=201)
 def create_category(
-    payload: CategoryCreate,
-    current_user: User = Depends(require_role(["admin"])),
-    db: Session = Depends(get_db)
+    payload: dict,
+    current_user: dict = Depends(require_role(["admin", "super_admin"])),
+    db: Database = Depends(get_db)
 ):
-    existing = db.query(ComplaintCategory).filter(ComplaintCategory.code == payload.code).first()
+    existing = db.categories.find_one({"code": payload.get("code")})
     if existing:
         raise HTTPException(status_code=400, detail="Category code already exists")
+    result = db.categories.insert_one(payload)
+    payload["id"] = str(result.inserted_id)
+    return payload
 
-    cat = ComplaintCategory(
-        code=payload.code,
-        name_en=payload.name_en,
-        name_ta=payload.name_ta,
-        default_priority=payload.default_priority,
-        icon_key=payload.icon_key
-    )
-    db.add(cat)
-    db.commit()
-    db.refresh(cat)
-    return cat
 
-@router.get("/departments", response_model=List[DepartmentResponse])
-def list_departments(db: Session = Depends(get_db)):
-    return db.query(Department).all()
+@router.get("/departments")
+def list_departments(db: Database = Depends(get_db)):
+    depts = list(db.departments.find({}, {"__v": 0}))
+    for d in depts:
+        d["id"] = str(d.pop("_id"))
+        if "districtId" in d:
+            d["districtId"] = str(d["districtId"])
+    return depts
 
-@router.get("/wards", response_model=List[WardResponse])
-def list_wards(db: Session = Depends(get_db)):
-    return db.query(Ward).order_by(Ward.ward_number.asc()).all()
+
+@router.get("/districts")
+def list_districts(db: Database = Depends(get_db)):
+    districts = list(db.districts.find({}, {"__v": 0}))
+    for d in districts:
+        d["id"] = str(d.pop("_id"))
+    return districts
+
 
 @router.get("/audit-logs")
 def get_audit_logs(
     limit: int = 50,
-    current_user: User = Depends(require_role(["admin"])),
-    db: Session = Depends(get_db)
+    current_user: dict = Depends(require_role(["admin", "super_admin"])),
+    db: Database = Depends(get_db)
 ):
-    logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit).all()
+    logs = list(db.auditlogs.find({}, {"__v": 0}).sort("createdAt", -1).limit(limit))
+    for log in logs:
+        log["id"] = str(log.pop("_id"))
+        if "userId" in log:
+            log["userId"] = str(log["userId"])
     return logs
 
-@router.get("/duplicates")
-def get_duplicate_links(
-    current_user: User = Depends(require_role(["admin"])),
-    db: Session = Depends(get_db)
+
+@router.get("/users")
+def list_users(
+    limit: int = 50,
+    current_user: dict = Depends(require_role(["admin", "super_admin"])),
+    db: Database = Depends(get_db)
 ):
-    duplicates = db.query(DuplicateLink).all()
-    results = []
-    for d in duplicates:
-        p = db.query(Complaint).filter(Complaint.id == d.primary_complaint_id).first()
-        dup = db.query(Complaint).filter(Complaint.id == d.duplicate_complaint_id).first()
-        if p and dup:
-            results.append({
-                "id": d.id,
-                "primary_ref": p.public_reference,
-                "primary_title": p.title,
-                "duplicate_ref": dup.public_reference,
-                "duplicate_title": dup.title,
-                "similarity_score": d.similarity_score,
-                "is_confirmed": d.is_confirmed,
-                "created_at": d.created_at
-            })
-    return results
+    users = list(db.users.find({}, {"passwordHash": 0, "__v": 0}).limit(limit))
+    for u in users:
+        u["id"] = str(u.pop("_id"))
+        if "districtId" in u and u["districtId"]:
+            u["districtId"] = str(u["districtId"])
+        if "departmentId" in u and u["departmentId"]:
+            u["departmentId"] = str(u["departmentId"])
+    return users

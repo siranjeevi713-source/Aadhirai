@@ -3,21 +3,26 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
-from app.core.database import engine, Base
-from app.core.seed import seed_database
+from app.core.database import get_mongo_client
 from app.api.v1.router import api_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize DB schema and seed baseline data
-    Base.metadata.create_all(bind=engine)
-    seed_database()
+    # Verify MongoDB connection on startup
+    try:
+        client = get_mongo_client()
+        client.admin.command("ping")
+        print(f"[FastAPI] MongoDB connected: {settings.MONGODB_URI}")
+    except Exception as e:
+        print(f"[FastAPI] WARNING: MongoDB connection failed: {e}")
     yield
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="AI-Powered Civic Accountability Engine — Pilot: Musiri, Tamil Nadu",
+    description="AI-Powered Civic Accountability Engine — AADHIRAI",
     lifespan=lifespan
 )
 
@@ -36,14 +41,26 @@ app.mount("/storage", StaticFiles(directory=str(settings.STORAGE_DIR)), name="st
 # Include API v1 router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+
+@app.get("/")
+def root():
+    return {
+        "service": "AADHIRAI FastAPI Backend",
+        "version": settings.VERSION,
+        "database": "MongoDB",
+        "docs": "/docs"
+    }
+
+
 @app.get("/health")
 def health_check():
     return {
         "status": "healthy",
         "service": "AADHIRAI Civic Accountability Engine",
-        "pilot": "Musiri, Tamil Nadu",
+        "database": "MongoDB",
         "version": settings.VERSION
     }
+
 
 if __name__ == "__main__":
     import uvicorn

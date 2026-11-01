@@ -50,8 +50,13 @@ async function analyzeImage(req, res) {
       success: true,
       fileUrl: `/uploads/${path.basename(fileObj.path)}`,
       fileName: path.basename(fileObj.path),
+      isCivicIssue: mlResult.isCivicIssue !== undefined ? mlResult.isCivicIssue : (mlResult.predictedCategory !== 'NON_CIVIC_IMAGE' && mlResult.predictedCategory !== 'OTHER / UNCLEAR'),
+      is_civic_issue: mlResult.is_civic_issue !== undefined ? mlResult.is_civic_issue : (mlResult.predictedCategory !== 'NON_CIVIC_IMAGE' && mlResult.predictedCategory !== 'OTHER / UNCLEAR'),
       predictedCategory: mlResult.predictedCategory || mlResult.predicted_category,
       predicted_category: mlResult.predictedCategory || mlResult.predicted_category,
+      categoryNameTa: mlResult.categoryNameTa || mlResult.category_name_ta || '',
+      suggestedDepartment: mlResult.suggestedDepartment || mlResult.suggested_department || 'Municipal Administration',
+      suggested_department: mlResult.suggestedDepartment || mlResult.suggested_department || 'Municipal Administration',
       confidence: mlResult.confidence !== undefined ? mlResult.confidence : mlResult.confidence_score,
       confidence_score: mlResult.confidence_score !== undefined ? mlResult.confidence_score : mlResult.confidence,
       quality: mlResult.quality || mlResult.image_quality,
@@ -86,6 +91,15 @@ async function submitComplaint(req, res) {
       return res.status(400).json({ success: false, message: 'lat, lng, citizenConfirmedCategory, and title are required.' });
     }
 
+    // Reject non-civic images
+    if (citizenConfirmedCategory === 'NON_CIVIC_IMAGE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid submission: The uploaded photo is not recognized as a civic infrastructure problem. Complaints must be genuine civic issues (potholes, garbage, water leaks, broken streetlights, etc.).',
+        messageTa: 'செல்லுபடியாகாத புகார்: பதிவேற்றப்பட்ட புகைப்படம் பொதுப் பிரச்சனையாகத் தெரியவில்லை. தயவுசெய்து சாலைப் பள்ளம், குப்பை, குடிநீர் கசிவு போன்ற பிரச்சனை புகைப்படத்தை பதிவேற்றவும்.'
+      });
+    }
+
     // Resolve incident district from coordinates using DB
     const incidentLat = parseFloat(lat);
     const incidentLng = parseFloat(lng);
@@ -116,9 +130,34 @@ async function submitComplaint(req, res) {
 
       if (rule) {
         departmentId = rule.departmentId;
-        // Find department admin for this department
         const admin = await User.findOne({ role: 'department_admin', departmentId, isActive: true });
         assignedAdminId = admin?._id || null;
+      } else {
+        // Deterministic civic department routing fallback
+        const CATEGORY_DEFAULT_DEPTS = {
+          POTHOLE: 'Roads & Infrastructure',
+          ROAD_DAMAGE: 'Roads & Infrastructure',
+          GARBAGE_ACCUMULATION: 'Sanitation & Solid Waste',
+          DRAINAGE_BLOCKAGE: 'Sanitation & Solid Waste',
+          SEWAGE_OVERFLOW: 'Sanitation & Solid Waste',
+          WATER_LEAKAGE: 'Water Supply',
+          WATERLOGGING: 'Water Supply',
+          BROKEN_STREETLIGHT: 'Electrical Maintenance',
+          DAMAGED_PUBLIC_INFRASTRUCTURE: 'Roads & Infrastructure',
+          FALLEN_TREE: 'Sanitation & Solid Waste',
+        };
+        const targetDeptPattern = CATEGORY_DEFAULT_DEPTS[categoryCode] || 'Roads';
+        const dept = await Department.findOne({
+          districtId: incidentDistrictId,
+          name: { $regex: targetDeptPattern.split(' ')[0], $options: 'i' },
+          isActive: true,
+        }) || await Department.findOne({ districtId: incidentDistrictId, isActive: true });
+
+        if (dept) {
+          departmentId = dept._id;
+          const admin = await User.findOne({ role: 'department_admin', departmentId, isActive: true });
+          assignedAdminId = admin?._id || null;
+        }
       }
     }
 

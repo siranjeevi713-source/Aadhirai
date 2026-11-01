@@ -181,6 +181,23 @@ export default function SubmitComplaintPage() {
     api.post<any>("/ai/classify-image", formData)
       .then((res) => {
         const catCode = (res.predicted_category || res.suggested_category || "").toUpperCase();
+        const isNonCivic = catCode.includes("NON_CIVIC") || catCode.includes("UNCLEAR") || res.is_civic_issue === false || res.isCivicIssue === false;
+
+        if (isNonCivic) {
+          const resultData: AiResult = {
+            suggested_category: "non_civic",
+            category_name: "பொதுப் பிரச்சனை அல்ல (Non-Civic Image)",
+            confidence: res.confidence !== undefined ? res.confidence : (res.confidence_score || 0.15),
+            severity: "NONE",
+            reason: res.reason || res.issue_description || "The uploaded image does not appear to show an actionable civic problem (e.g., selfie, domestic animal, food, or non-infrastructure scene).",
+            suggested_department: "None (Not a Civic Issue)",
+          };
+          setAiResult(resultData);
+          setAiError("⚠️ செல்லுபடியாகாத புகைப்படம்: இது பொதுப் பிரச்சனை அல்ல. தயவுசெய்து சாலைப் பள்ளம், தேங்கிய குப்பை போன்ற பிரச்சனை புகைப்படத்தை பதிவேற்றவும்.");
+          setTimeout(() => setStep("ai_result"), 800);
+          return;
+        }
+
         let matchedCat = categories.find(c => 
           c.id === res.category_id || 
           c.code?.toUpperCase() === catCode || 
@@ -623,26 +640,46 @@ export default function SubmitComplaintPage() {
 
               {/* Right Column: AI Detection Card matching Reference 2 */}
               <div className="md:col-span-7 space-y-5">
-                {/* Green Detected Problem Badge */}
-                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                      <Shield className="w-5 h-5" />
+                {aiResult.suggested_category === "non_civic" ? (
+                  <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800 block">
+                          செல்லுபடியாகாது / Rejected
+                        </span>
+                        <h3 className="text-base font-black text-rose-950">
+                          {aiResult.category_name}
+                        </h3>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
-                        Detected Problem
-                      </span>
-                      <h3 className="text-base font-black text-slate-900">
-                        {aiResult.category_name || "Road Damage (Pothole)"}
-                      </h3>
-                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-rose-200 text-rose-900 text-xs font-bold shrink-0">
+                      Not a Civic Issue
+                    </span>
                   </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                        <Shield className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
+                          Detected Problem
+                        </span>
+                        <h3 className="text-base font-black text-slate-900">
+                          {aiResult.category_name || "Road Damage (Pothole)"}
+                        </h3>
+                      </div>
+                    </div>
 
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-200 text-emerald-900 text-xs font-bold shrink-0">
-                    {Math.round(aiResult.confidence * 100)}% Confidence
-                  </span>
-                </div>
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-200 text-emerald-900 text-xs font-bold shrink-0">
+                      {Math.round(aiResult.confidence * 100)}% Confidence
+                    </span>
+                  </div>
+                )}
 
                 {/* Explanation text */}
                 <p className="text-xs text-slate-600 leading-relaxed">
@@ -761,22 +798,50 @@ export default function SubmitComplaintPage() {
 
                 {/* Action Buttons matching Reference 2 */}
                 <div className="flex items-center gap-3 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setStep("location")}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>Looks Correct</span>
-                  </button>
+                  {aiResult.suggested_category === "non_civic" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhoto(null);
+                          setPhotoUrl(null);
+                          setAiResult(null);
+                          setStep("upload");
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                      >
+                        <Upload className="w-4 h-4" />
+                        <span>Upload Valid Civic Photo (புதிய படம்)</span>
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setShowCategorySelector(!showCategorySelector)}
-                    className="flex items-center justify-center gap-1.5 py-3 px-5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-slate-700 text-xs font-bold transition-all cursor-pointer"
-                  >
-                    <span>Change Category</span>
-                  </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowCategorySelector(!showCategorySelector)}
+                        className="flex items-center justify-center gap-1.5 py-3 px-5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        <span>Override Manually</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setStep("location")}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>Looks Correct</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowCategorySelector(!showCategorySelector)}
+                        className="flex items-center justify-center gap-1.5 py-3 px-5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        <span>Change Category</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

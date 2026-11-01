@@ -14,17 +14,11 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "aadhirai-super-secret-jwt-key-2026-tamiltight-production")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 24 hours for pilot
-    
-    # Database
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
-        f"sqlite:///{BASE_DIR}/aadhirai_local.db"
-    )
-    # Fix for Postgres URLs from Neon / Supabase / Vercel Postgres:
-    # SQLAlchemy requires 'postgresql://' instead of 'postgres://'
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-    
+
+    # MongoDB (primary persistent database)
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://127.0.0.1:27017/aadhirai")
+    MONGODB_DB: str = os.getenv("MONGODB_DB", "aadhirai")
+
     # Object Storage
     STORAGE_DIR: Path = BASE_DIR / "storage_uploads"
     

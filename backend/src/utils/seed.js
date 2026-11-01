@@ -105,6 +105,8 @@ async function seedDatabase() {
     { categoryCode: 'WATER_LEAKAGE', departmentId: deptMap[cbWaterCode]?._id },
     { categoryCode: 'WATERLOGGING', departmentId: deptMap[cbWaterCode]?._id },
     { categoryCode: 'BROKEN_STREETLIGHT', departmentId: deptMap[cbElecCode]?._id },
+    { categoryCode: 'DAMAGED_PUBLIC_INFRASTRUCTURE', departmentId: deptMap[cbRoadsCode]?._id },
+    { categoryCode: 'FALLEN_TREE', departmentId: deptMap[cbSanCode]?._id },
   ];
 
   for (const rule of cbRoutingRules) {

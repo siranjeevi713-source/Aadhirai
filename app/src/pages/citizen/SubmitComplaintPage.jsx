@@ -44,10 +44,21 @@ export default function SubmitComplaintPage() {
       const data = res.data
       const aiData = data.ai || data
       setAiResult(aiData)
-      const detected = aiData.predictedCategory || aiData.predicted_category || 'ROAD_DAMAGE'
-      setCitizenCategory(detected)
-      setTitle(`${detected.replace(/_/g, ' ')} reported via AI`)
-      setDescription(aiData.explanation || aiData.issue_description || `AI Computer Vision detected ${detected} with confidence ${((aiData.confidence || aiData.confidence_score || 0.9) * 100).toFixed(1)}%.`)
+
+      const isNonCivic = aiData.isCivicIssue === false || aiData.predictedCategory === 'NON_CIVIC_IMAGE' || aiData.isUnclear === true
+
+      if (isNonCivic) {
+        setCitizenCategory('NON_CIVIC_IMAGE')
+        setTitle('')
+        setDescription('')
+        setError('⚠️ செல்லுபடியாகாத புகைப்படம்: இது பொதுப் பிரச்சனை (Civic Issue) அல்ல. தயவுசெய்து சாலைப் பள்ளம், தேங்கிய குப்பை, குடிநீர் கசிவு போன்ற பிரச்சனை புகைப்படத்தை பதிவேற்றவும். (The uploaded photo is not recognized as an actionable civic problem.)')
+      } else {
+        const detected = aiData.predictedCategory || aiData.predicted_category || 'GARBAGE_ACCUMULATION'
+        setCitizenCategory(detected)
+        setTitle(`${detected.replace(/_/g, ' ')} reported via AI`)
+        setDescription(aiData.explanation || aiData.issue_description || `AI Computer Vision detected ${detected} with confidence ${((aiData.confidence || aiData.confidence_score || 0.9) * 100).toFixed(1)}%.`)
+        setError(null)
+      }
     } catch (err) {
       console.warn('AI analysis error, proceeding with manual categorization:', err)
       setCitizenCategory('GARBAGE_ACCUMULATION')
@@ -74,6 +85,12 @@ export default function SubmitComplaintPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
+
+    if (citizenCategory === 'NON_CIVIC_IMAGE') {
+      setError('⚠️ செல்லுபடியாகாத புகார்: பொதுப் பிரச்சனை அல்லாத புகைப்படத்தை சமர்ப்பிக்க முடியாது. தயவுசெய்து சரியான பிரச்சனையின் புகைப்படத்தை பதிவேற்றவும். (Cannot submit non-civic photos. Please upload a genuine civic issue.)')
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -170,23 +187,42 @@ export default function SubmitComplaintPage() {
             <div style={{ marginTop: '12px', display: 'flex', gap: '16px', alignItems: 'center' }}>
               <img src={previewUrl} alt="Preview" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #CBD5E1' }} />
               {aiResult && (
-                <div style={{ padding: '14px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', flex: 1, fontSize: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <div style={{ fontWeight: 800, color: '#166534', fontSize: '14px' }}>
-                      AI Detection: {aiResult.predictedCategory || aiResult.predicted_category}
+                aiResult.isCivicIssue === false || aiResult.predictedCategory === 'NON_CIVIC_IMAGE' || aiResult.isUnclear ? (
+                  <div style={{ padding: '14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px', flex: 1, fontSize: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ fontWeight: 800, color: '#DC2626', fontSize: '14px' }}>
+                        ⚠️ பொதுப் பிரச்சனை அல்ல / Not a Civic Issue
+                      </div>
+                      <span style={{ background: '#FEE2E2', color: '#B91C1C', padding: '2px 8px', borderRadius: '999px', fontWeight: 700, fontSize: '11px' }}>
+                        செல்லுபடியாகாது / Rejected
+                      </span>
                     </div>
-                    <span style={{ background: '#DCFCE7', color: '#15803D', padding: '2px 8px', borderRadius: '999px', fontWeight: 700, fontSize: '11px' }}>
-                      {((aiResult.confidence || aiResult.confidence_score || 0.9) * 100).toFixed(1)}% Confidence
-                    </span>
+                    <div style={{ color: '#991B1B', marginBottom: '6px', lineHeight: 1.4 }}>
+                      <strong>AI விளக்கம்:</strong> {aiResult.explanation || aiResult.issue_description || 'The uploaded photo does not contain an actionable civic municipal defect.'}
+                    </div>
+                    <div style={{ color: '#B91C1C', fontWeight: 600, fontSize: '11px' }}>
+                      🚫 இந்த புகைப்படத்தை புகாராக சமர்ப்பிக்க முடியாது. தயவுசெய்து சாலைப் பள்ளம், தேங்கிய குப்பை, குடிநீர் கசிவு, பழுதான தெருவிளக்கு போன்ற உண்மையான பொதுப் பிரச்சனையின் புகைப்படத்தை பதிவேற்றவும்.
+                    </div>
                   </div>
-                  <div style={{ color: '#334155', marginBottom: '4px', lineHeight: 1.4 }}>
-                    <strong>Explanation:</strong> {aiResult.explanation || aiResult.issue_description || 'Visual evidence identified.'}
+                ) : (
+                  <div style={{ padding: '14px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', flex: 1, fontSize: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ fontWeight: 800, color: '#166534', fontSize: '14px' }}>
+                        ✓ AI கண்டறிந்தது: {aiResult.predictedCategory || aiResult.predicted_category}
+                      </div>
+                      <span style={{ background: '#DCFCE7', color: '#15803D', padding: '2px 8px', borderRadius: '999px', fontWeight: 700, fontSize: '11px' }}>
+                        {((aiResult.confidence || aiResult.confidence_score || 0.9) * 100).toFixed(1)}% Confidence
+                      </span>
+                    </div>
+                    <div style={{ color: '#334155', marginBottom: '4px', lineHeight: 1.4 }}>
+                      <strong>விளக்கம்:</strong> {aiResult.explanation || aiResult.issue_description || 'Visual evidence identified.'}
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', color: '#1E293B', marginTop: '6px', fontSize: '12px', background: '#DCFCE7', padding: '6px 10px', borderRadius: '6px' }}>
+                      <div><strong>ஒதுக்கப்படும் அரசு துறை:</strong> {aiResult.suggestedDepartment || aiResult.suggested_department || 'Municipal Administration'}</div>
+                      <div><strong>தீவிரம் (Severity):</strong> {aiResult.suggestedSeverity || aiResult.suggested_severity || 'HIGH'}</div>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '12px', color: '#64748B', marginTop: '6px', fontSize: '11px' }}>
-                    <div><strong>Quality:</strong> {aiResult.quality || aiResult.image_quality || 'EXCELLENT'}</div>
-                    <div><strong>Severity:</strong> {aiResult.suggestedSeverity || aiResult.suggested_severity || 'HIGH'}</div>
-                  </div>
-                </div>
+                )
               )}
             </div>
           )}
@@ -199,21 +235,27 @@ export default function SubmitComplaintPage() {
           </label>
           <select
             value={citizenCategory}
-            onChange={e => setCitizenCategory(e.target.value)}
+            onChange={e => {
+              setCitizenCategory(e.target.value)
+              if (e.target.value !== 'NON_CIVIC_IMAGE') setError(null)
+            }}
             className="input-field"
             required
           >
-            <option value="GARBAGE_ACCUMULATION">Garbage Accumulation & Waste (Sanitation Dept)</option>
-            <option value="POTHOLE">Pothole (Roads Dept)</option>
-            <option value="ROAD_DAMAGE">Road Damage / Asphalt Fissures (Roads Dept)</option>
-            <option value="DRAINAGE_BLOCKAGE">Drainage Blockage / Culvert Obstruction (Sanitation Dept)</option>
-            <option value="SEWAGE_OVERFLOW">Sewage Overflow / Foul Blackwater (Sanitation Dept)</option>
-            <option value="WATER_LEAKAGE">Water Supply Pipe Leakage (Water Dept)</option>
-            <option value="WATERLOGGING">Street Waterlogging / Rainwater Pooling (Water Dept)</option>
-            <option value="BROKEN_STREETLIGHT">Broken Streetlight / Electrical Pole (Electrical Dept)</option>
-            <option value="DAMAGED_PUBLIC_INFRASTRUCTURE">Damaged Public Infrastructure (Civic Dept)</option>
-            <option value="FALLEN_TREE">Fallen Tree / Road Obstruction (Highways Dept)</option>
-            <option value="OTHER / UNCLEAR">Other / Unclear Civic Defect</option>
+            {citizenCategory === 'NON_CIVIC_IMAGE' && (
+              <option value="NON_CIVIC_IMAGE">⚠️ பொதுப் பிரச்சனை அல்ல (செல்லுபடியாகாத புகைப்படம் - சமர்ப்பிக்க முடியாது)</option>
+            )}
+            <option value="GARBAGE_ACCUMULATION">குப்பை குவிப்பு / Garbage Accumulation (துப்புரவு & திடக்கழிவு மேலாண்மை துறை)</option>
+            <option value="POTHOLE">சாலைக் குழி / Pothole (சாலை & உள்கட்டமைப்பு துறை)</option>
+            <option value="ROAD_DAMAGE">சாலை சேதம் / Road Damage (சாலை & உள்கட்டமைப்பு துறை)</option>
+            <option value="DRAINAGE_BLOCKAGE">வடிகால் அடைப்பு / Drainage Blockage (துப்புரவு & வடிகால் துறை)</option>
+            <option value="SEWAGE_OVERFLOW">கழிவுநீர் பெருக்கெடுப்பு / Sewage Overflow (துப்புரவு துறை)</option>
+            <option value="WATER_LEAKAGE">குடிநீர் குழாய் கசிவு / Water Leakage (குடிநீர் வழங்கல் துறை)</option>
+            <option value="WATERLOGGING">மழைநீர் தேக்கம் / Waterlogging (குடிநீர் & வடிகால் துறை)</option>
+            <option value="BROKEN_STREETLIGHT">பழுதான தெருவிளக்கு / Broken Streetlight (மின்சார பராமரிப்பு துறை)</option>
+            <option value="DAMAGED_PUBLIC_INFRASTRUCTURE">பொதுக் கட்டமைப்பு சேதம் / Damaged Infrastructure (பொதுப்பணித்துறை)</option>
+            <option value="FALLEN_TREE">விழுந்த மரம் / Fallen Tree (நெடுஞ்சாலை & பூங்கா துறை)</option>
+            <option value="OTHER / UNCLEAR">மற்றவை / Other Civic Defect (நகராட்சி பொது நிர்வாகம்)</option>
           </select>
         </div>
 

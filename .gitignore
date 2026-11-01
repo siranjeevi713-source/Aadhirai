@@ -43,4 +43,9 @@ backend/.pytest_cache/
 # OS Files
 .DS_Store
 Thumbs.db
+*.db
+
+# Uploads & Storage
+backend/uploads/
+backend/storage_uploads/
 

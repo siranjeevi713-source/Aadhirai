@@ -1,112 +1,117 @@
+"""
+Evidence verification endpoints for AADHIRAI FastAPI backend.
+Uses pymongo instead of SQLAlchemy.
+"""
 from datetime import datetime, timezone
-from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from pymongo.database import Database
+from bson import ObjectId
 from app.core.database import get_db
 from app.core.rbac import get_current_user, require_role
-from app.models.models import (
-    User, Complaint, VerificationRequest, ComplaintEvidence, AuditLog
-)
-from app.schemas.schemas import VerificationReviewRequest, VerificationResponse
-from app.services.verification_service import VerificationService
 
 router = APIRouter(prefix="/verification", tags=["Evidence Verification"])
+
+
+def _oid(id_str):
+    try:
+        return ObjectId(str(id_str))
+    except Exception:
+        return id_str
+
 
 @router.get("/{complaint_id}")
 def get_verification_details(
     complaint_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: dict = Depends(get_current_user),
+    db: Database = Depends(get_db)
 ):
-    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    complaint = db.complaints.find_one({"_id": _oid(complaint_id)})
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint not found")
 
-    v_req = db.query(VerificationRequest).filter(VerificationRequest.complaint_id == complaint_id).first()
-    
-    before_ev = db.query(ComplaintEvidence).filter(
-        ComplaintEvidence.complaint_id == complaint_id,
-        ComplaintEvidence.phase == "INITIAL_SUBMISSION"
-    ).first()
-
-    after_ev = db.query(ComplaintEvidence).filter(
-        ComplaintEvidence.complaint_id == complaint_id,
-        ComplaintEvidence.phase == "RESOLUTION_PROOF"
-    ).first()
+    # Look for a review record
+    review = db.reviews.find_one({"complaintId": _oid(complaint_id)}) if "reviews" in db.list_collection_names() else None
 
     return {
-        "complaint_id": complaint.id,
-        "public_reference": complaint.public_reference,
-        "complaint_status": complaint.status,
-        "verification_status": v_req.status if v_req else "UNSUBMITTED",
-        "ai_visual_delta_score": v_req.ai_visual_delta_score if v_req else 0.0,
-        "phash_match_detected": v_req.phash_match_detected if v_req else False,
-        "gps_distance_delta_meters": v_req.gps_distance_delta_meters if v_req else 0.0,
-        "audit_notes": v_req.audit_notes if v_req else "",
-        "reviewer_override_notes": v_req.reviewer_override_notes if v_req else None,
-        "reviewed_at": v_req.reviewed_at if v_req else None,
+        "complaint_id": str(complaint["_id"]),
+        "public_reference": complaint.get("ticketNumber", ""),
+        "complaint_status": complaint.get("status", ""),
+        "verification_status": review.get("status", "UNSUBMITTED") if review else "UNSUBMITTED",
+        "ai_visual_delta_score": review.get("aiVisualDeltaScore", 0.0) if review else 0.0,
+        "phash_match_detected": review.get("phashMatchDetected", False) if review else False,
+        "gps_distance_delta_meters": review.get("gpsDistanceDeltaMeters", 0.0) if review else 0.0,
+        "audit_notes": review.get("auditNotes", "") if review else "",
+        "reviewer_override_notes": review.get("reviewerOverrideNotes") if review else None,
+        "reviewed_at": review.get("reviewedAt") if review else None,
         "before_evidence": {
-            "file_url": before_ev.file_url if before_ev else None,
-            "perceptual_hash": before_ev.perceptual_hash if before_ev else None
-        } if before_ev else None,
+            "file_url": complaint.get("beforeImageUrl"),
+        },
         "after_evidence": {
-            "file_url": after_ev.file_url if after_ev else None,
-            "perceptual_hash": after_ev.perceptual_hash if after_ev else None
-        } if after_ev else None
+            "file_url": complaint.get("afterImageUrl"),
+        } if complaint.get("afterImageUrl") else None,
     }
+
 
 @router.post("/{complaint_id}/review")
 def review_verification(
     complaint_id: str,
-    payload: VerificationReviewRequest,
-    current_user: User = Depends(require_role(["admin", "reviewer"])),
-    db: Session = Depends(get_db)
+    payload: dict,
+    current_user: dict = Depends(require_role(["admin", "super_admin", "reviewer"])),
+    db: Database = Depends(get_db)
 ):
-    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    complaint = db.complaints.find_one({"_id": _oid(complaint_id)})
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint not found")
 
-    v_req = db.query(VerificationRequest).filter(VerificationRequest.complaint_id == complaint_id).first()
-    if not v_req:
-        raise HTTPException(status_code=400, detail="No verification request submitted for this complaint")
+    action = payload.get("action", "").upper()
+    justification = payload.get("justification", "")
 
-    before_ev = db.query(ComplaintEvidence).filter(
-        ComplaintEvidence.complaint_id == complaint_id,
-        ComplaintEvidence.phase == "INITIAL_SUBMISSION"
-    ).first()
-
-    after_ev = db.query(ComplaintEvidence).filter(
-        ComplaintEvidence.complaint_id == complaint_id,
-        ComplaintEvidence.phase == "RESOLUTION_PROOF"
-    ).first()
-
-    if payload.action == "APPROVE":
-        v_req.status = "PASSED"
-        complaint.status = "VERIFIED_RESOLVED"
-        complaint.resolved_at = datetime.now(timezone.utc)
-        if after_ev:
-            VerificationService.publish_proof_record(db, complaint, before_ev, after_ev)
-    elif payload.action == "REJECT":
-        v_req.status = "REJECTED"
-        complaint.status = "REOPENED"
+    if action == "APPROVE":
+        new_status = "VERIFIED_RESOLVED"
+        resolved_at = datetime.now(timezone.utc)
+        db.complaints.update_one(
+            {"_id": _oid(complaint_id)},
+            {"$set": {
+                "status": new_status,
+                "resolvedAt": resolved_at,
+                "verifiedAt": resolved_at,
+                "updatedAt": resolved_at
+            }}
+        )
+    elif action == "REJECT":
+        new_status = "REOPENED"
+        db.complaints.update_one(
+            {"_id": _oid(complaint_id)},
+            {"$set": {"status": new_status, "updatedAt": datetime.now(timezone.utc)}}
+        )
     else:
         raise HTTPException(status_code=400, detail="Invalid action: must be APPROVE or REJECT")
 
-    v_req.reviewer_override_notes = payload.justification
-    v_req.reviewed_by = current_user.id
-    v_req.reviewed_at = datetime.now(timezone.utc)
+    # Upsert review record
+    db.reviews.update_one(
+        {"complaintId": _oid(complaint_id)},
+        {"$set": {
+            "complaintId": _oid(complaint_id),
+            "status": "PASSED" if action == "APPROVE" else "REJECTED",
+            "reviewerOverrideNotes": justification,
+            "reviewedBy": current_user["_id"],
+            "reviewedAt": datetime.now(timezone.utc),
+            "updatedAt": datetime.now(timezone.utc)
+        }},
+        upsert=True
+    )
 
-    db.add(AuditLog(
-        user_id=current_user.id,
-        action=f"VERIFICATION_REVIEW_{payload.action}",
-        entity_type="Complaint",
-        entity_id=complaint.id,
-        details=f"Admin {current_user.full_name} reviewed verification: {payload.action}. Justification: {payload.justification}"
-    ))
+    db.auditlogs.insert_one({
+        "userId": current_user["_id"],
+        "action": f"VERIFICATION_REVIEW_{action}",
+        "entityType": "Complaint",
+        "entityId": complaint_id,
+        "details": f"Reviewer {current_user.get('fullName', 'Reviewer')} reviewed verification: {action}. Justification: {justification}",
+        "createdAt": datetime.now(timezone.utc)
+    })
 
-    db.commit()
     return {
-        "message": f"Verification review recorded: {payload.action}",
-        "complaint_status": complaint.status,
-        "verification_status": v_req.status
+        "message": f"Verification review recorded: {action}",
+        "complaint_status": new_status,
+        "verification_status": "PASSED" if action == "APPROVE" else "REJECTED"
     }
