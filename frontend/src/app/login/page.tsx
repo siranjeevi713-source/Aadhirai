@@ -85,17 +85,17 @@ export default function LoginPage() {
     setSelectedRole(role);
     setError(null);
     if (role === "citizen") {
-      setIdentifier("9876543210");
-      setPassword("Password123!");
+      setIdentifier("citizen@aadhirai.gov.in");
+      setPassword("Aadhirai@2026");
     } else if (role === "officer") {
-      setIdentifier("officer.roads@aadhirai.gov.in");
-      setPassword("Officer@123");
+      setIdentifier("deptadmin@aadhirai.gov.in");
+      setPassword("Aadhirai@2026");
     } else if (role === "admin") {
-      setIdentifier("admin@aadhirai.gov.in");
-      setPassword("Admin@123");
+      setIdentifier("superadmin@aadhirai.gov.in");
+      setPassword("Aadhirai@2026");
     } else if (role === "reviewer") {
       setIdentifier("reviewer@aadhirai.gov.in");
-      setPassword("Reviewer@123");
+      setPassword("Aadhirai@2026");
     }
   };
 
@@ -143,12 +143,14 @@ export default function LoginPage() {
       login(res.access_token, res.user);
 
       // Backend validated role routing
-      const userRoles = (res.user.roles || []).map((r: any) => r.name.toLowerCase());
-      if (userRoles.includes("admin")) {
+      const userRoles = (res.user.roles || []).map((r: any) => (r.name || r).toLowerCase());
+      const userRole = (res.user.role || "").toLowerCase();
+
+      if (userRoles.includes("admin") || userRoles.includes("super_admin") || userRole === "admin" || userRole === "super_admin") {
         router.push("/admin");
-      } else if (userRoles.includes("reviewer")) {
+      } else if (userRoles.includes("reviewer") || userRole === "reviewer") {
         router.push("/admin/verification");
-      } else if (userRoles.includes("officer")) {
+      } else if (userRoles.includes("officer") || userRoles.includes("department_admin") || userRole === "officer" || userRole === "department_admin") {
         router.push("/officer");
       } else {
         router.push("/citizen");
