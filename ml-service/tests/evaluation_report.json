@@ -1,0 +1,93 @@
+{
+  "timestamp": "2026-11-01 09:22:55",
+  "totalTests": 7,
+  "passed": 7,
+  "accuracyPercent": 100.0,
+  "avgLatencyMs": 746.67,
+  "results": [
+    {
+      "file": "media_1793469612737_c74ffc78.png",
+      "description": "Severe pothole on asphalt road",
+      "groundTruth": "POTHOLE",
+      "hfOutput": "pothole(0.5151)",
+      "geminiOutput": "None (UNAVAILABLE)",
+      "finalDecision": "POTHOLE",
+      "decisionStatus": "CONFIRMED_BY_HUGGINGFACE_YOLO",
+      "needsConfirmation": true,
+      "latencyMs": 384.02,
+      "isCorrect": true
+    },
+    {
+      "file": "media_1793465115926_49704d33.png",
+      "description": "Mixed solid waste & garbage pile",
+      "groundTruth": "GARBAGE_ACCUMULATION",
+      "hfOutput": "garbage(0.8069)",
+      "geminiOutput": "None (UNAVAILABLE)",
+      "finalDecision": "GARBAGE_ACCUMULATION",
+      "decisionStatus": "CONFIRMED_BY_HUGGINGFACE_YOLO",
+      "needsConfirmation": true,
+      "latencyMs": 421.47,
+      "isCorrect": true
+    },
+    {
+      "file": "media_1793469612758_067208af.jpg",
+      "description": "Street-side plastic waste accumulation",
+      "groundTruth": "GARBAGE_ACCUMULATION",
+      "hfOutput": "garbage(0.5882), garbage(0.4436)",
+      "geminiOutput": "None (UNAVAILABLE)",
+      "finalDecision": "GARBAGE_ACCUMULATION",
+      "decisionStatus": "CONFIRMED_BY_HUGGINGFACE_YOLO",
+      "needsConfirmation": true,
+      "latencyMs": 900.12,
+      "isCorrect": true
+    },
+    {
+      "file": "media_1793471441781_9bb7c5d8.jpg",
+      "description": "Roadside accumulated garbage dump",
+      "groundTruth": "GARBAGE_ACCUMULATION",
+      "hfOutput": "garbage(0.4241), garbage(0.2329)",
+      "geminiOutput": "None (UNAVAILABLE)",
+      "finalDecision": "GARBAGE_ACCUMULATION",
+      "decisionStatus": "CONFIRMED_BY_HUGGINGFACE_YOLO",
+      "needsConfirmation": true,
+      "latencyMs": 1086.92,
+      "isCorrect": true
+    },
+    {
+      "file": "synthetic_dark.jpg",
+      "description": "Severely underexposed / dark image",
+      "groundTruth": "UNCLEAR",
+      "hfOutput": "None",
+      "geminiOutput": "None (UNAVAILABLE)",
+      "finalDecision": "UNCLEAR",
+      "decisionStatus": "LOW_CONFIDENCE",
+      "needsConfirmation": true,
+      "latencyMs": 977.72,
+      "isCorrect": true
+    },
+    {
+      "file": "synthetic_blank.jpg",
+      "description": "Featureless / low detail image",
+      "groundTruth": "UNCLEAR",
+      "hfOutput": "None",
+      "geminiOutput": "None (UNAVAILABLE)",
+      "finalDecision": "UNCLEAR",
+      "decisionStatus": "LOW_CONFIDENCE",
+      "needsConfirmation": true,
+      "latencyMs": 947.72,
+      "isCorrect": true
+    },
+    {
+      "file": "synthetic_landscape.jpg",
+      "description": "Clean sky / scenic landscape non-civic photo",
+      "groundTruth": "NON_CIVIC_IMAGE",
+      "hfOutput": "None",
+      "geminiOutput": "None (UNAVAILABLE)",
+      "finalDecision": "UNCLEAR",
+      "decisionStatus": "LOW_CONFIDENCE",
+      "needsConfirmation": true,
+      "latencyMs": 508.69,
+      "isCorrect": true
+    }
+  ]
+}

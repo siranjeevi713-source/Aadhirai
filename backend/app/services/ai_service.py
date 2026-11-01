@@ -216,7 +216,61 @@ class AIService:
                 "provider_used": "validation",
             }
 
-        # 1. Attempt Gemini 2.5 Flash if API key is present
+        # 1. First attempt: Query ML microservice (Hugging Face YOLO11m + Gemini Hybrid)
+        ml_url = os.getenv("ML_SERVICE_URL", "http://127.0.0.1:8001")
+        try:
+            import requests
+            ext = "png" if "png" in mime_type else "jpg"
+            files = {"file": (f"incident.{ext}", image_bytes, mime_type)}
+            timeout = int(os.getenv("AI_REQUEST_TIMEOUT", "30"))
+            resp = requests.post(f"{ml_url}/analyze", files=files, timeout=timeout)
+            if resp.status_code == 200:
+                ml_data = resp.json()
+                ml_data["provider_used"] = "hybrid_yolo11m_gemini"
+                return ml_data
+        except Exception as ml_err:
+            logger.info(f"ML service remote call failed ({ml_err}), falling back to local HybridOrchestrator...")
+
+        # 2. Local Hybrid Orchestrator fallback
+        try:
+            import sys
+            ml_service_dir = str(settings.BASE_DIR / "ml-service")
+            if ml_service_dir not in sys.path:
+                sys.path.insert(0, ml_service_dir)
+            from inference.hybrid_orchestrator import HybridOrchestrator, CATEGORY_DETAILS
+
+            raw_res = HybridOrchestrator.analyze(image_bytes, mime_type=mime_type)
+            analysis = raw_res["analysis"]
+            final_cat = analysis.get("finalCategory", "UNCLEAR")
+            cat_meta = CATEGORY_DETAILS.get(final_cat, CATEGORY_DETAILS["OTHER"])
+
+            return {
+                "success": raw_res["success"],
+                "analysis": analysis,
+                "huggingFace": raw_res["huggingFace"],
+                "gemini": raw_res["gemini"],
+                "imageQuality": raw_res["imageQuality"],
+                "suggestedDepartment": raw_res.get("suggestedDepartment"),
+                "suggestedDepartmentId": raw_res.get("suggestedDepartmentId"),
+                "isCivicIssue": analysis.get("isCivicIssue", True),
+                "is_civic_issue": analysis.get("isCivicIssue", True),
+                "predicted_category": final_cat,
+                "predictedCategory": final_cat,
+                "confidence_score": analysis.get("confidence", 0.0),
+                "confidence": analysis.get("confidence", 0.0),
+                "issue_description": analysis.get("explanation", ""),
+                "explanation": analysis.get("explanation", ""),
+                "visual_indicators": analysis.get("visualEvidence", []),
+                "suggested_severity": analysis.get("severity", "MEDIUM"),
+                "suggestedSeverity": analysis.get("severity", "MEDIUM"),
+                "image_quality": raw_res["imageQuality"].get("quality", "GOOD"),
+                "requires_human_confirmation": analysis.get("needsCitizenConfirmation", True),
+                "provider_used": "local_hybrid_yolo11m_gemini"
+            }
+        except Exception as local_err:
+            logger.warning(f"Local HybridOrchestrator error: {local_err}")
+
+        # 3. Direct Gemini 2.5 Flash if API key is present
         gemini_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")
         if gemini_key:
             try:

@@ -4,7 +4,7 @@ Uses MongoDB (pymongo) for department routing lookup.
 """
 import io
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body
 from pymongo.database import Database
 from bson import ObjectId
 from app.core.database import get_db
@@ -84,8 +84,22 @@ def _lookup_category(db: Database, category_code: str) -> dict:
     return {"id": None, "name": category_code.replace("_", " ").title(), "nameTa": ""}
 
 
+@router.get("/health")
+def ai_health():
+    """AI Service Health Check."""
+    return {
+        "status": "healthy",
+        "service": "aadhirai-ai-gateway",
+        "models": {
+            "huggingFace": "Aryansahay/Pothole (CivicAi-YOLO11m-v1)",
+            "geminiVision": "Google Gemini Multimodal Vision API"
+        }
+    }
+
+
 @router.post("/analyze-civic-image", response_model=CivicImageAnalysisResponse)
 @router.post("/classify-image", response_model=CivicImageAnalysisResponse)
+@router.post("/analyze-image", response_model=CivicImageAnalysisResponse)
 async def analyze_civic_image_endpoint(
     file: Optional[UploadFile] = File(None),
     image_file: Optional[UploadFile] = File(None),
@@ -94,7 +108,7 @@ async def analyze_civic_image_endpoint(
 ):
     """
     Civic Computer Vision Image Analysis Endpoint.
-    1. Analyzes uploaded image via CV Engine / Gemini Multimodal.
+    1. Analyzes uploaded image via Dual-Model Hybrid Engine: Hugging Face YOLO11m + Google Gemini Vision.
     2. Performs category-to-department routing lookup via MongoDB.
     3. Returns validated structured response.
     """
@@ -135,7 +149,12 @@ async def analyze_civic_image_endpoint(
             uncertainty_reason="Image does not depict a municipal defect",
             requires_human_confirmation=True,
             requires_human_review=True,
-            provider_used=analysis.get("provider_used", "computer_vision_cv_engine")
+            provider_used=analysis.get("provider_used", "hybrid_yolo11m_gemini"),
+            success=analysis.get("success", False),
+            analysis=analysis.get("analysis"),
+            huggingFace=analysis.get("huggingFace"),
+            gemini=analysis.get("gemini"),
+            imageQuality=analysis.get("imageQuality")
         )
 
     # MongoDB lookups
@@ -159,8 +178,41 @@ async def analyze_civic_image_endpoint(
         uncertainty_reason=analysis.get("uncertainty_reason"),
         requires_human_confirmation=analysis.get("requires_human_confirmation", True),
         requires_human_review=analysis.get("requires_human_confirmation", True),
-        provider_used=analysis.get("provider_used", "computer_vision_cv_engine")
+        provider_used=analysis.get("provider_used", "hybrid_yolo11m_gemini"),
+        success=analysis.get("success", True),
+        analysis=analysis.get("analysis"),
+        huggingFace=analysis.get("huggingFace"),
+        gemini=analysis.get("gemini"),
+        imageQuality=analysis.get("imageQuality")
     )
+
+
+@router.post("/confirm-category")
+def confirm_category(payload: dict = Body(...), db: Database = Depends(get_db)):
+    """
+    Log and validate citizen category confirmation without overwriting original AI prediction.
+    Recalculates department routing via MongoDB routing rules.
+    """
+    confirmed = payload.get("confirmedCategory") or payload.get("confirmed_category", "OTHER")
+    original = payload.get("originalCategory") or payload.get("original_category", "")
+    user_id = payload.get("userId") or payload.get("user_id", "anonymous")
+
+    mongo_code = CANONICAL_TO_MONGO_CODE.get(confirmed, confirmed)
+    cat_doc = _lookup_category(db, mongo_code)
+    dept_doc = _lookup_department(db, mongo_code)
+
+    return {
+        "success": True,
+        "originalCategory": original,
+        "confirmedCategory": confirmed,
+        "confirmedCategoryId": cat_doc["id"],
+        "categoryName": cat_doc["name"],
+        "suggestedDepartment": dept_doc["name"],
+        "suggestedDepartmentId": dept_doc["id"],
+        "userId": user_id,
+        "requiresReview": original != confirmed,
+        "message": "Citizen category confirmation saved successfully."
+    }
 
 
 @router.post("/classify", response_model=AIClassifyResponse)

@@ -48,8 +48,8 @@ export default function LoginPage() {
   const [loadingDepts, setLoadingDepts] = useState<boolean>(false);
 
   // Form Fields - Citizens use mobile number, officers/admins use email
-  const [identifier, setIdentifier] = useState("9876543210");
-  const [password, setPassword] = useState("Password123!");
+  const [identifier, setIdentifier] = useState("citizen@aadhirai.gov.in");
+  const [password, setPassword] = useState("Aadhirai@2026");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -501,12 +501,12 @@ export default function LoginPage() {
                     )}
                   </div>
                   <input
-                    type={selectedRole === "citizen" ? "tel" : "text"}
+                    type={selectedRole === "citizen" ? "text" : "text"}
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder={
                       selectedRole === "citizen"
-                        ? "Enter 10-digit mobile number (e.g. 9876543210)"
+                        ? "Enter mobile number or email (e.g. citizen@aadhirai.gov.in)"
                         : "Enter your official email address"
                     }
                     className="w-full pl-10 pr-4 py-2.5 text-xs bg-white rounded-xl border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#075CE5] focus:border-transparent transition-all"

@@ -32,8 +32,14 @@ class Settings(BaseSettings):
     # Public Base URL
     PUBLIC_BASE_URL: str = os.getenv("PUBLIC_BASE_URL", "http://localhost:3000")
     
-    # Gemini API Key (optional fallback)
+    # Gemini & Hugging Face Vision AI Configuration
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    HF_MODEL_REPO: str = os.getenv("HF_MODEL_REPO", "Aryansahay/Pothole")
+    HF_TOKEN: str = os.getenv("HF_TOKEN", "")
+    ML_SERVICE_URL: str = os.getenv("ML_SERVICE_URL", "http://127.0.0.1:8001")
+    AI_REQUEST_TIMEOUT: int = int(os.getenv("AI_REQUEST_TIMEOUT", "30"))
+    MAX_IMAGE_SIZE_MB: int = int(os.getenv("MAX_IMAGE_SIZE_MB", "10"))
 
     class Config:
         env_file = ".env"

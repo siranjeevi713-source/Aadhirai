@@ -260,6 +260,12 @@ class CivicImageAnalysisResponse(BaseModel):
     requires_human_confirmation: bool
     requires_human_review: bool
     provider_used: str
+    # Section 5 Dual-Model Hybrid Schema
+    success: bool = True
+    analysis: Optional[Dict[str, Any]] = None
+    huggingFace: Optional[Dict[str, Any]] = None
+    gemini: Optional[Dict[str, Any]] = None
+    imageQuality: Optional[Dict[str, Any]] = None
 
 class DuplicateCheckRequest(BaseModel):
     latitude: float

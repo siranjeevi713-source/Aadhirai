@@ -75,11 +75,16 @@ export default function ProtectedRoute({
 
   // 3. Role Authorization Check
   const userRoleNames = user.roles.map((r) => r.name.toLowerCase());
-  const isAdmin = userRoleNames.includes("admin");
+  const isAdmin = userRoleNames.includes("admin") || userRoleNames.includes("super_admin");
+  // Map aliases: department_admin → officer
+  const effectiveRoles = new Set(userRoleNames);
+  if (effectiveRoles.has("department_admin")) effectiveRoles.add("officer");
+  if (effectiveRoles.has("super_admin")) effectiveRoles.add("admin");
+
   const isAuthorized =
     !allowedRoles ||
     isAdmin ||
-    allowedRoles.some((role) => userRoleNames.includes(role.toLowerCase()));
+    allowedRoles.some((role) => effectiveRoles.has(role.toLowerCase()));
 
   if (!isAuthorized) {
     // Determine user's primary portal to guide them back safely

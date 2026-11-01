@@ -27,23 +27,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (savedToken && savedUser) {
       try {
+        const parsedUser = JSON.parse(savedUser);
+        // Set user + token from localStorage immediately so ProtectedRoute doesn't flash
         setToken(savedToken);
-        setUser(JSON.parse(savedUser));
-        // Verify with backend
+        setUser(parsedUser);
+        // Mark loading done immediately — we already have valid cached session
+        setIsLoading(false);
+        // Silently refresh user data in background (don't clear session on network error)
         api.get<User>("/auth/me")
           .then((freshUser) => {
             setUser(freshUser);
             localStorage.setItem("aadhirai_user", JSON.stringify(freshUser));
           })
-          .catch(() => {
-            // Token expired or invalid
-            localStorage.removeItem("aadhirai_token");
-            localStorage.removeItem("aadhirai_user");
-            setToken(null);
-            setUser(null);
-          })
-          .finally(() => setIsLoading(false));
+          .catch((err: any) => {
+            // Only clear session on explicit 401 (token truly invalid/expired)
+            // Don't clear on network errors or timeouts
+            if (err?.status === 401) {
+              localStorage.removeItem("aadhirai_token");
+              localStorage.removeItem("aadhirai_user");
+              setToken(null);
+              setUser(null);
+            }
+          });
       } catch {
+        // Corrupted localStorage — clear and show login
+        localStorage.removeItem("aadhirai_token");
+        localStorage.removeItem("aadhirai_user");
         setIsLoading(false);
       }
     } else {
@@ -76,8 +85,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasRole = (roleName: string): boolean => {
     if (!user) return false;
-    const roleNames = user.roles.map((r) => r.name);
-    return roleNames.includes("admin") || roleNames.includes(roleName);
+    const roleNames = user.roles.map((r) => r.name.toLowerCase());
+    // Admin / super_admin passes all checks
+    if (roleNames.includes("admin") || roleNames.includes("super_admin")) return true;
+    // Alias: department_admin counts as officer
+    if (roleName === "officer" && roleNames.includes("department_admin")) return true;
+    return roleNames.includes(roleName.toLowerCase());
   };
 
   const quickLoginAs = async (role: "citizen" | "officer" | "reviewer" | "admin") => {
